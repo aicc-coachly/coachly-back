@@ -2,7 +2,7 @@
 /node_modules
 /uploads
 
-.DB_store
+.DB_Store
 .env
 .pyvenv
 .requirements.txt
