@@ -1,19 +1,25 @@
-const database = require("../../database/database");
+const database = require("../database/database");
 
 // 사용자 기본 정보 업데이트
 exports.updateUserInfo = async (req, res) => {
-  const { user_number } = req.params; // URL에서 user_number를 가져옴
+  const user_number = parseInt(req.params.user_number, 10); // URL에서 user_number를 정수로 변환
   const { email, name, phone, gender } = req.body;
 
   try {
-    const result = await database.query(
-      "UPDATE users SET email = COALESCE($1, email), name = COALESCE($2, name), phone = COALESCE($3, phone), gender = COALESCE($4, gender), updated_at = CURRENT_TIMESTAMP WHERE user_number = $5 RETURNING *",
-      [email, name, phone, gender, user_number]
+    // 유효한 user_number인지 확인
+    const userCheck = await database.query(
+      "SELECT * FROM users WHERE user_number = $1",
+      [user_number]
     );
 
-    if (result.rows.length === 0) {
+    if (userCheck.rows.length === 0) {
       return res.status(404).json({ error: "User not found" });
     }
+
+    const result = await database.query(
+      "UPDATE users SET email = COALESCE(NULLIF($1, ''), email), name = COALESCE(NULLIF($2, ''), name), phone = COALESCE(NULLIF($3, ''), phone), gender = COALESCE(NULLIF($4, ''), gender), updated_at = CURRENT_TIMESTAMP WHERE user_number = $5 RETURNING *",
+      [email, name, phone, gender, user_number]
+    );
 
     return res.status(200).json({
       message: "User information updated successfully",
@@ -31,14 +37,20 @@ exports.updateUserAddress = async (req, res) => {
   const { user_zipcode, user_address, user_detail_address } = req.body;
 
   try {
+    // 유효한 user_number인지 확인
+    const userCheck = await database.query(
+      "SELECT * FROM user_address WHERE user_number = $1",
+      [user_number]
+    );
+
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({ error: "User address not found" });
+    }
+
     const result = await database.query(
       "UPDATE user_address SET user_zipcode = COALESCE($1, user_zipcode), user_address = COALESCE($2, user_address), user_detail_address = COALESCE($3, user_detail_address), updated_at = CURRENT_TIMESTAMP WHERE user_number = $4 RETURNING *",
       [user_zipcode, user_address, user_detail_address, user_number]
     );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "User address not found" });
-    }
 
     return res.status(200).json({
       message: "User address updated successfully",
@@ -68,6 +80,18 @@ exports.updateUserInbody = async (req, res) => {
   } = req.body;
 
   try {
+    // 유효한 user_number인지 확인
+    const userCheck = await database.query(
+      "SELECT * FROM user_inbody WHERE user_number = $1",
+      [user_number]
+    );
+
+    if (userCheck.rows.length === 0) {
+      return res
+        .status(404)
+        .json({ error: "User inbody information not found" });
+    }
+
     const result = await database.query(
       `UPDATE user_inbody SET 
         user_height = COALESCE($1, user_height),
@@ -98,12 +122,6 @@ exports.updateUserInbody = async (req, res) => {
         user_number,
       ]
     );
-
-    if (result.rows.length === 0) {
-      return res
-        .status(404)
-        .json({ error: "User inbody information not found" });
-    }
 
     return res.status(200).json({
       message: "User inbody information updated successfully",

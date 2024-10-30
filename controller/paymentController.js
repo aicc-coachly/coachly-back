@@ -1,4 +1,4 @@
-const database = require("../../database/database");
+const database = require("../database/database");
 
 exports.postPtPayment = async (req, res) => {
   const { amount_number, user_number, trainer_number, payment_option } =

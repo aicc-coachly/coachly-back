@@ -14,12 +14,36 @@ exports.getTrainer = async (req, res) => {
 
   try {
     const result = await database.query(
-      "SELECT * FROM trainers WHERE trainer_number = $1",
+      `SELECT 
+          t.*, 
+          p.amount AS pt_amount, 
+          p.option AS pt_option, 
+          g.trainer_address, 
+          g.trainer_detail_address, 
+          ti.resume AS trainer_resume
+      FROM 
+          trainers t
+      LEFT JOIN 
+          pt_cost_option p ON t.trainer_number = p.trainer_number
+      LEFT JOIN 
+          gym_address g ON t.trainer_number = g.trainer_number
+      LEFT JOIN 
+          trainer_image ti ON t.trainer_number = ti.trainer_number
+      WHERE 
+          t.trainer_number = $1`,
       [trainer_number]
     );
-    return res.status(200).json(result.rows);
+
+    // 결과가 없을 경우 처리
+    if (result.rows.length === 0) {
+      return res.status(404).json({ msg: "트레이너를 찾을 수 없습니다." });
+    }
+
+    return res.status(200).json(result.rows[0]); // 첫 번째 결과만 반환
   } catch (error) {
-    return res.status(500).json({ msg: "Get Items Fail" + error });
+    return res.status(500).json({
+      msg: "트레이너 정보를 가져오는 데 실패했습니다." + error.message,
+    });
   }
 };
 
@@ -27,8 +51,10 @@ exports.getTrainerPtAmount = async (req, res) => {
   const { trainer_number } = req.params; // URL 파라미터에서 trainer_number를 가져옵니다.
 
   try {
+    console.log(`Fetching PT amount for trainer number: ${trainer_number}`); // 로깅 추가
+
     const result = await database.query(
-      "SELECT * FROM pt_amount WHERE trainer_number = $1",
+      "SELECT * FROM pt_cost_option WHERE trainer_number = $1",
       [trainer_number]
     );
 
@@ -78,7 +104,7 @@ exports.getTrainerAccount = async (req, res) => {
 
   try {
     const result = await database.query(
-      "SELECT * FROM trainer_account WHERE trainer_number = $1",
+      "SELECT * FROM trainer_bank_account WHERE trainer_number = $1",
       [trainer_number]
     );
 
@@ -102,6 +128,7 @@ exports.deleteTrainer = async (req, res) => {
   const { trainer_number } = req.params;
 
   try {
+    // 트레이너 상태를 false로 업데이트 및 delete_at 설정
     const result = await database.query(
       "UPDATE trainers SET status = FALSE, delete_at = CURRENT_TIMESTAMP WHERE trainer_number = $1 RETURNING *",
       [trainer_number]
@@ -111,9 +138,23 @@ exports.deleteTrainer = async (req, res) => {
       return res.status(404).json({ error: "Trainer not found" });
     }
 
+    // 관련된 피티 가격 정보의 상태를 false로 업데이트 및 delete_at 설정
+    await database.query(
+      "UPDATE pt_cost_option SET status = FALSE, delete_at = CURRENT_TIMESTAMP WHERE trainer_number = $1",
+      [trainer_number]
+    );
+
+    // 관련된 헬스장 주소의 상태를 false로 업데이트 및 delete_at 설정
+    await database.query(
+      "UPDATE gym_address SET status = FALSE, delete_at = CURRENT_TIMESTAMP WHERE trainer_number = $1",
+      [trainer_number]
+    );
+
+    // 추가적으로 필요한 테이블이 있다면 여기에 추가
+
     return res.status(200).json({
       message: "Trainer soft deleted successfully",
-      user: result.rows[0],
+      trainer: result.rows[0],
     });
   } catch (error) {
     console.error("Database query error:", error);

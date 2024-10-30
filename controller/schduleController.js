@@ -1,4 +1,4 @@
-const database = require("../../database/database");
+const database = require("../database/database");
 
 exports.postPtSchedule = async (req, res) => {
   const { class_date, class_time, class_address } = req.body;

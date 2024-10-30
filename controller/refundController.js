@@ -1,4 +1,4 @@
-const database = require("../config/database"); // 데이터베이스 연결 설정 파일
+const database = require("../database/database");
 
 // 환불 요청 생성 (환불 사유 포함)
 exports.createRefundRequest = async (req, res) => {
