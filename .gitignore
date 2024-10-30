@@ -1,0 +1,8 @@
+/trainerData
+/node_modules
+/uploads
+
+.DB_store
+.env
+.pyvenv
+.requirements.txt
