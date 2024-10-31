@@ -16,7 +16,7 @@ from langchain_openai import ChatOpenAI
 from collections import Counter
 from langchain.schema import Document  # Document 클래스 임포트
 from langchain.chains import ConversationChain
-from langchain.memory import ConversationBufferWindowMemory
+from langchain.memory import ConversationSummaryMemory
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_teddynote.messages import stream_response
 
@@ -134,7 +134,7 @@ def main():
     retriever = vectorstore.as_retriever()
 
     # LLM 및 프롬프트 설정
-    llm = ChatOpenAI(model_name="gpt-4", temperature=0.3)
+    llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0.3)
     prompt = ChatPromptTemplate.from_template(template)
 
     # 대화 기억 설정
@@ -142,7 +142,7 @@ def main():
 
     # RAG 체인 구성
     def rag_chain(user_input):
-        memory = ConversationBufferWindowMemory(k=3, return_messages=True)
+        memory = ConversationSummaryMemory(llm=llm, max_memory_size=3)
         chat_history = memory.load_memory_variables({}).get("chat_history", [])
         context = retriever.invoke(user_input)
         response = prompt.format(

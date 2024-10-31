@@ -12,10 +12,35 @@ const app = express(); // express 모듈을 사용하기 위해 app 변수에 �
 const server = app.listen(PORT, () =>
   console.log(`Server is running on ${PORT}`)
 );
-// const io = socketIo(server);
+const io = socketIo(server, {
+  cors: {
+    origin: "http://localhost:3000", // 클라이언트 주소
+    methods: ["GET", "POST"], // 허용할 HTTP 메서드
+    allowedHeaders: ["my-custom-header", "Content-Type"], // 허용할 헤더
+    credentials: true, // 쿠키 사용 여부
+  },
+});
+
+// Socket.io 이벤트 처리
+io.on("connection", (socket) => {
+  console.log("A user connected:", socket.id);
+
+  socket.on("joinRoom", (roomId) => {
+    socket.join(roomId);
+    console.log(`User joined room: ${roomId}`);
+  });
+
+  socket.on("sendMessage", (message) => {
+    io.to(message.roomId).emit("messageReceived", message); // 특정 방으로 메시지 전송
+  });
+
+  socket.on("disconnect", () => {
+    console.log("User disconnected:", socket.id);
+  });
+});
 
 app.get("/", (req, res) => {
-  res.send("이건");
+  res.send("server");
 });
 
 app.use(cors()); //htpp, https 프로토콜을 사용하는 서버 간의 통신을 허용한다.
