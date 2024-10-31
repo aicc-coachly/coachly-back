@@ -20,7 +20,8 @@ exports.getTrainer = async (req, res) => {
           p.option AS pt_option, 
           g.trainer_address, 
           g.trainer_detail_address, 
-          ti.resume AS trainer_resume
+          ti.resume AS trainer_resume,
+          ARRAY_AGG(s.service_name) AS service_options
       FROM 
           trainers t
       LEFT JOIN 
@@ -29,8 +30,14 @@ exports.getTrainer = async (req, res) => {
           gym_address g ON t.trainer_number = g.trainer_number
       LEFT JOIN 
           trainer_image ti ON t.trainer_number = ti.trainer_number
+      LEFT JOIN 
+          service_link sl ON t.trainer_number = sl.trainer_number
+      LEFT JOIN 
+          service_option s ON sl.service_number = s.service_number
       WHERE 
-          t.trainer_number = $1`,
+          t.trainer_number = $1
+      GROUP BY 
+          t.trainer_number, p.amount, p.option, g.trainer_address, g.trainer_detail_address, ti.resume`,
       [trainer_number]
     );
 

@@ -27,6 +27,9 @@ app.use(require("./routes/chatRoutes"));
 app.use(require("./routes/trainerRoutes"));
 app.use(require("./routes/userRoutes"));
 app.use(require("./routes/authTokenRoutes"));
+app.use(require("./routes/refundRoutes"));
+app.use(require("./routes/scheduleRoutes"));
+app.use(require("./routes//paymentsRoutes"));
 
 // const job = schedule.scheduleJob('15 12 * * *', () => {
 //   console.log('점심 먹을 시간이야 !');

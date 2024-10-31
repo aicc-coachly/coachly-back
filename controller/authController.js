@@ -54,7 +54,7 @@ exports.trainerSignup = async (req, res) => {
 
     // 트레이너 이미지 정보 삽입
     await client.query(
-      "INSERT INTO trainer_image (image, resume) VALUES ($1, $2)",
+      "INSERT INTO trainer_image (image, resume) VALUES ($1, $2) RETURNING trainer_number",
       [trainer_image, resume]
     );
 
@@ -66,7 +66,7 @@ exports.trainerSignup = async (req, res) => {
 
     // PT 가격 정보 삽입
     await client.query(
-      "INSERT INTO pt_cost_option (option, amount, frequency) VALUES ($1, $2, $3)",
+      "INSERT INTO pt_cost_option (option, amount, frequency) VALUES ($1, $2, $3) RETURNING option, amount, frequency",
       [option, amount, frequency]
     );
 
@@ -75,6 +75,14 @@ exports.trainerSignup = async (req, res) => {
       "INSERT INTO trainer_bank_account (account, bank_name, account_name) VALUES ($1, $2, $3)",
       [account, bank_name, account_name]
     );
+
+    // 서비스 옵션 등록
+    for (const service_number of service_options) {
+      await client.query(
+        "INSERT INTO service_link (service_number, trainer_number) VALUES ($1, $2)",
+        [service_number, trainer_number]
+      );
+    }
 
     await client.query("COMMIT");
 
