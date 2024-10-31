@@ -1,6 +1,6 @@
 const express = require("express"); // express 모듈 가져오기
 const cors = require("cors"); // cors 모듈 가져오기
-const PORT = 8080;
+const PORT = 8000;
 const { spawn } = require("child_process");
 const path = require("path");
 const socketIo = require("socket.io");
