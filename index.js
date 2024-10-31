@@ -1,6 +1,6 @@
 const express = require("express"); // express 모듈 가져오기
 const cors = require("cors"); // cors 모듈 가져오기
-const PORT = 8080;
+const PORT = 8000;
 const { spawn } = require("child_process");
 const path = require("path");
 const socketIo = require("socket.io");
@@ -15,7 +15,7 @@ const server = app.listen(PORT, () =>
 // const io = socketIo(server);
 
 app.get("/", (req, res) => {
-  res.send("");
+  res.send("이건");
 });
 
 app.use(cors()); //htpp, https 프로토콜을 사용하는 서버 간의 통신을 허용한다.
