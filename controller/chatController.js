@@ -6,13 +6,9 @@ exports.AiChatRequest = (req, res) => {
   const sendQuestion = req.body.question;
   console.log(sendQuestion);
 
-  const execPython = path.join(__dirname, "..", "aichat.py");
+  const execPython = path.join(__dirname, "../", "aichat.py");
   const pythonPath = path.join(
-    "C:",
-    "conda",
-    "envs",
-    "recom_env",
-    "python.exe"
+    "/Users/jeongminseog/conda/miniconda3/envs/recom_env/bin/python"
   );
 
   const net = spawn(pythonPath, [execPython, sendQuestion]);

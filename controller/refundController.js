@@ -79,9 +79,13 @@ exports.getAllRefund = async (req, res) => {
       `SELECT ur.*, urr.refund_reason 
        FROM user_refund ur
        LEFT JOIN user_refund_reason urr ON ur.refund_number = urr.refund_number
-       WHERE ur.status != 'deleted'
        ORDER BY ur.refund_date DESC`
     );
+
+    // 데이터가 없을 경우 처리
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "환불 요청이 없습니다." });
+    }
 
     return res.status(200).json(result.rows);
   } catch (error) {

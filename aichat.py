@@ -1,7 +1,8 @@
 import os # 파일 경로 설정 등에 사용
 import sys # 한글 출력 인코딩에 사용
 import io # 한글 출력 인코딩에 사용
-import mysql.connector
+import psycopg2
+import requests
 from langchain import hub
 from langchain_text_splitters import RecursiveCharacterTextSplitter 
 from langchain_community.vectorstores import FAISS
@@ -17,13 +18,19 @@ from langchain.schema import Document  # Document 클래스 임포트
 from langchain.chains import ConversationChain
 from langchain.memory import ConversationBufferWindowMemory
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_teddynote.messages import stream_response
 
 from dotenv import load_dotenv
+# 한글 출력 인코딩 설정
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-# print(sys.executable)
+
+# 환경 변수 로드
 load_dotenv()
-os.getenv("OPENAI_API_KEY")
-os.getenv("TAVILY_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+TRAINER_API_URL = os.getenv("TRAINER_API_URL")
+
+# OpenAI API 키 설정
+os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 
 
 
@@ -99,75 +106,60 @@ template = """당신은 전문적인 AI 헬스트레이너입니다. 사용자�
 #Answer:"""
 
 
-llm=ChatOpenAI(model_name="gpt-4o-mini", temperature=0.3)
-prompt = ChatPromptTemplate.from_template(template)
+# 트레이너 정보를 API에서 가져오는 함수
+def get_trainers_from_api():
+    try:
+        response = requests.get(TRAINER_API_URL)
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
+        print(f"API 요청 중 오류 발생: {e}")
+        return []
 
-# 데이터베이스에서 트레이너 정보 가져오기
-def get_trainers_from_db():
-    connection = mysql.connector.connect(
-        host=os.getenv("DB_HOST"),        # 데이터베이스 호스트
-        user=os.getenv("DB_USER"),        # 데이터베이스 사용자 이름
-        password=os.getenv("DB_PASS"), # 데이터베이스 비밀번호
-        port=os.getenv("DB_PORT"), # 데이터베이스 비밀번호
-        database=os.getenv("DB_NAME")      # 사용할 데이터베이스 이름
-    )
+# 메인 실행 함수
+def main():
+    # 트레이너 데이터 가져오기
+    trainers_data = get_trainers_from_api()
+
+    # Document 객체 생성
+    documents = [Document(page_content=f"{trainer['name']}의 정보: {trainer['trainer_resume']}", metadata=trainer) for trainer in trainers_data]
+
+    # 텍스트 분할
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    texts = text_splitter.split_documents(documents)
+
+    # 벡터 저장소 생성
+    embedding = OpenAIEmbeddings()
+    vectorstore = FAISS.from_documents(documents=texts, embedding=embedding)
+    retriever = vectorstore.as_retriever()
+
+    # LLM 및 프롬프트 설정
+    llm = ChatOpenAI(model_name="gpt-4", temperature=0.3)
+    prompt = ChatPromptTemplate.from_template(template)
+
+    # 대화 기억 설정
     
-    cursor = connection.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM trainers")
-    trainers = cursor.fetchall()
-    
-    cursor.close()
-    connection.close()
-    
-    return trainers
 
-# 기본적으로 Python은 Windows에서 cp949 인코딩을 사용하지만, 한글 텍스트 파일이 UTF-8로 인코딩된 경우 이 문제가 발생할 수 있습니다.
-trainers_data = get_trainers_from_db()
-documents = [Document(page_content=f"{trainer['trainer_name']}의 정보: {trainer['trainer_resume']}", metadata=trainer) for trainer in trainers_data]
+    # RAG 체인 구성
+    def rag_chain(user_input):
+        memory = ConversationBufferWindowMemory(k=3, return_messages=True)
+        chat_history = memory.load_memory_variables({}).get("chat_history", [])
+        context = retriever.invoke(user_input)
+        response = prompt.format(
+            chat_history=chat_history,
+            question=user_input,
+            context=context
+        )
+        response = llm.invoke(response)
+        memory.save_context({"input": user_input}, {"output": response.content})
+        return response.content
 
-# print(documents)
+    # 사용자 입력 받기 (Node.js에서 전달받은 것으로 가정)
+    user_question = sys.argv[1] if len(sys.argv) > 1 else "기본 질문"
 
+    # 응답 생성 및 스트리밍
+    answer = rag_chain(user_question)
+    stream_response(answer)
 
-text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200) # 분할 토큰수(chunk), 오버랩 정도
-texts = text_splitter.split_documents(documents)
-
-embedding = OpenAIEmbeddings()
-# # 벡터스토어를 생성합니다.
-vectorstore = FAISS.from_documents(documents=texts, embedding=embedding)
-retriever = vectorstore.as_retriever()
-retrievers = TavilySearchAPIRetriever()
-
-# 체인을 생성합니다.
-# RunnablePassthrough() : 데이터를 그대로 전달하는 역할 invoke 메서드를 통해 입력된 데이터를 그대로 반환
-# StrOutputParser() : LLM이나 ChatModel에서 나오는 언어 모델의 출력을 문자열 형식으로 변환
-rag_chain = (
-    {"context": {retriever, retrievers}, "question": RunnablePassthrough()}
-    | template
-    | prompt
-    | llm
-    | StrOutputParser()
-)
-
-from langchain_teddynote.messages import stream_response
-
-memory = ConversationBufferWindowMemory(k=3)
-
-conversation = ConversationChain(llm=llm, memory=memory)
-
-
-def save_conversation_memory(question, answer):
-    conversation.append({"question": question, "answer": answer})
-
-recieved_question = sys.argv[1]
-# print('질문: ', recieved_question)
-
-answer = rag_chain.stream(recieved_question)
-stream_response(answer)
-
-# 대화를 메모리에 저장
-save_conversation_memory(recieved_question, answer)
-
-# 응답 스트리밍
-stream_response(answer)
-
-# print(answer)
+if __name__ == "__main__":
+    main()

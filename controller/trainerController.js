@@ -2,10 +2,26 @@ const database = require("../database/database");
 
 exports.getTrainers = async (req, res) => {
   try {
-    const result = await database.query("SELECT * FROM trainers");
+    const result = await database.query(`
+      SELECT 
+        t.*, 
+        p.amount AS pt_cost_option, 
+        g.trainer_address, 
+        g.trainer_detail_address,
+        ti.resume AS trainer_resume,
+        ARRAY_AGG(s.service_name) AS service_options
+      FROM trainers t
+      LEFT JOIN pt_cost_option p ON t.trainer_number = p.trainer_number
+      LEFT JOIN gym_address g ON t.trainer_number = g.trainer_number
+      LEFT JOIN trainer_image ti ON t.trainer_number = ti.trainer_number
+      LEFT JOIN service_link sl ON t.trainer_number = sl.trainer_number
+      LEFT JOIN service_option s ON sl.service_number = s.service_number
+      GROUP BY t.trainer_number, p.amount, g.trainer_address, g.trainer_detail_address, ti.resume
+    `);
+
     return res.status(200).json(result.rows);
   } catch (error) {
-    return res.status(500).json({ msg: "Get Items Fail" + error });
+    return res.status(500).json({ msg: "Get Trainers Fail: " + error });
   }
 };
 
@@ -16,7 +32,7 @@ exports.getTrainer = async (req, res) => {
     const result = await database.query(
       `SELECT 
           t.*, 
-          p.amount AS pt_amount, 
+          p.amount AS pt_cost_option, 
           p.option AS pt_option, 
           g.trainer_address, 
           g.trainer_detail_address, 
