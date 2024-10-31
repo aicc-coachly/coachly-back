@@ -18,7 +18,7 @@ app.use(express.json()); // express 모듈의 json() 메소드를 사용한다.
 app.use(bodyParser.json());
 
 app.get("/", (req, res) => {
-  res.send("");
+  res.send("heloooooooooo");
 });
 
 // const job = schedule.scheduleJob('15 12 * * *', () => {
