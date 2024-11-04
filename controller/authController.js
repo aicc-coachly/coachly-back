@@ -1,7 +1,7 @@
-const database = require("../database/database");
-const jwt = require("jsonwebtoken");
-const bcrypt = require("bcrypt");
-require("dotenv").config();
+const database = require('../database/database');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
+require('dotenv').config();
 
 async function connectDatabase() {
   return await database.connect();
@@ -33,20 +33,20 @@ exports.trainerSignup = async (req, res) => {
   if (!Array.isArray(service_options) || service_options.length > 2) {
     return res
       .status(400)
-      .json({ error: "서비스 옵션은 최대 2개까지 선택 가능합니다." });
+      .json({ error: '서비스 옵션은 최대 2개까지 선택 가능합니다.' });
   }
 
   const client = await connectDatabase();
 
   try {
-    await client.query("BEGIN");
+    await client.query('BEGIN');
 
     // 비밀번호 해싱
     const hashedPass = await bcrypt.hash(pass, 10);
 
     // 트레이너 기본 정보 삽입
     const trainerResult = await client.query(
-      "INSERT INTO trainers (trainer_id, pass, name, gender, phone) VALUES ($1, $2, $3, $4, $5) RETURNING trainer_number",
+      'INSERT INTO trainers (trainer_id, pass, name, gender, phone) VALUES ($1, $2, $3, $4, $5) RETURNING trainer_number',
       [trainer_id, hashedPass, name, gender, phone]
     );
 
@@ -54,45 +54,45 @@ exports.trainerSignup = async (req, res) => {
 
     // 트레이너 이미지 정보 삽입
     await client.query(
-      "INSERT INTO trainer_image (image, resume) VALUES ($1, $2) RETURNING trainer_number",
+      'INSERT INTO trainer_image (image, resume) VALUES ($1, $2) RETURNING trainer_number',
       [trainer_image, resume]
     );
 
     // 헬스장 주소 정보 삽입
     await client.query(
-      "INSERT INTO gym_address (trainer_zipcode, trainer_address, trainer_detail_address) VALUES ($1, $2, $3)",
+      'INSERT INTO gym_address (trainer_zipcode, trainer_address, trainer_detail_address) VALUES ($1, $2, $3)',
       [trainer_zipcode, trainer_address, trainer_detail_address]
     );
 
     // PT 가격 정보 삽입
     await client.query(
-      "INSERT INTO pt_cost_option (option, amount, frequency) VALUES ($1, $2, $3) RETURNING option, amount, frequency",
+      'INSERT INTO pt_cost_option (option, amount, frequency) VALUES ($1, $2, $3) RETURNING option, amount, frequency',
       [option, amount, frequency]
     );
 
     // 트레이너 계좌 정보 삽입
     await client.query(
-      "INSERT INTO trainer_bank_account (account, bank_name, account_name) VALUES ($1, $2, $3)",
+      'INSERT INTO trainer_bank_account (account, bank_name, account_name) VALUES ($1, $2, $3)',
       [account, bank_name, account_name]
     );
 
     // 서비스 옵션 등록
     for (const service_number of service_options) {
       await client.query(
-        "INSERT INTO service_link (service_number, trainer_number) VALUES ($1, $2)",
+        'INSERT INTO service_link (service_number, trainer_number) VALUES ($1, $2)',
         [service_number, trainer_number]
       );
     }
 
-    await client.query("COMMIT");
+    await client.query('COMMIT');
 
     return res
       .status(200)
-      .json({ message: "트레이너가 성공적으로 등록되었습니다." });
+      .json({ message: '트레이너가 성공적으로 등록되었습니다.' });
   } catch (error) {
-    await client.query("ROLLBACK");
-    console.error("데이터베이스 쿼리 오류:", error);
-    return res.status(500).json({ error: "서버 오류가 발생했습니다." });
+    await client.query('ROLLBACK');
+    console.error('데이터베이스 쿼리 오류:', error);
+    return res.status(500).json({ error: '서버 오류가 발생했습니다.' });
   } finally {
     client.release();
   }
@@ -105,19 +105,19 @@ exports.trainerLogin = async (req, res) => {
 
   try {
     const result = await client.query(
-      "SELECT * FROM trainers WHERE trainer_id = $1",
+      'SELECT * FROM trainers WHERE trainer_id = $1',
       [trainer_id]
     );
 
     if (result.rows.length === 0) {
-      return res.status(401).json({ error: "잘못된 자격 증명입니다." });
+      return res.status(401).json({ error: '잘못된 자격 증명입니다.' });
     }
 
     const trainer = result.rows[0];
     const isMatch = await bcrypt.compare(pass, trainer.pass);
 
     if (!isMatch) {
-      return res.status(401).json({ error: "잘못된 자격 증명입니다." });
+      return res.status(401).json({ error: '잘못된 자격 증명입니다.' });
     }
 
     const token = jwt.sign(
@@ -126,13 +126,13 @@ exports.trainerLogin = async (req, res) => {
         trainer_number: trainer.trainer_number,
       },
       process.env.JWT_SECRET,
-      { expiresIn: "1h" }
+      { expiresIn: '1h' }
     );
 
-    return res.status(200).json({ message: "로그인 성공", token });
+    return res.status(200).json({ message: '로그인 성공', token });
   } catch (error) {
-    console.error("데이터베이스 쿼리 오류:", error);
-    return res.status(500).json({ error: "서버 오류가 발생했습니다." });
+    console.error('데이터베이스 쿼리 오류:', error);
+    return res.status(500).json({ error: '서버 오류가 발생했습니다.' });
   } finally {
     client.release();
   }
@@ -155,14 +155,14 @@ exports.userSignup = async (req, res) => {
   const client = await connectDatabase();
 
   try {
-    await client.query("BEGIN");
+    await client.query('BEGIN');
 
     // 비밀번호 해싱
     const hashedPass = await bcrypt.hash(pass, 10);
 
     // 사용자 기본 정보 삽입
     const userResult = await client.query(
-      "INSERT INTO users (user_id, pass, email, name, birth, phone, gender) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING user_number",
+      'INSERT INTO users (user_id, pass, email, name, birth, phone, gender) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING user_number',
       [user_id, hashedPass, email, name, birth, phone, gender]
     );
 
@@ -170,19 +170,22 @@ exports.userSignup = async (req, res) => {
 
     // 사용자 주소 정보 삽입
     await client.query(
-      "INSERT INTO user_address (user_number, user_zipcode, user_address, user_detail_address) VALUES ($1, $2, $3, $4)",
+      'INSERT INTO user_address (user_number, user_zipcode, user_address, user_detail_address) VALUES ($1, $2, $3, $4)',
       [user_number, user_zipcode, user_address, user_detail_address]
     );
 
-    await client.query("COMMIT");
+    await client.query('COMMIT');
 
     return res
       .status(200)
-      .json({ message: "사용자가 성공적으로 등록되었습니다." });
+      .json({
+        status: 'success',
+        message: '사용자가 성공적으로 등록되었습니다.',
+      });
   } catch (error) {
-    await client.query("ROLLBACK");
-    console.error("데이터베이스 쿼리 오류:", error);
-    return res.status(500).json({ error: "서버 오류가 발생했습니다." });
+    await client.query('ROLLBACK');
+    console.error('데이터베이스 쿼리 오류:', error);
+    return res.status(500).json({ error: '서버 오류가 발생했습니다.' });
   } finally {
     client.release();
   }
@@ -195,32 +198,32 @@ exports.userLogin = async (req, res) => {
 
   try {
     const result = await client.query(
-      "SELECT * FROM users WHERE user_id = $1",
+      'SELECT * FROM users WHERE user_id = $1',
       [user_id]
     );
 
     if (result.rows.length === 0) {
-      return res.status(401).json({ error: "잘못된 자격 증명입니다." });
+      return res.status(401).json({ error: '잘못된 자격 증명입니다.' });
     }
 
     const user = result.rows[0];
     const isMatch = await bcrypt.compare(pass, user.pass);
 
     if (!isMatch) {
-      return res.status(401).json({ error: "잘못된 자격 증명입니다." });
+      return res.status(401).json({ error: '잘못된 자격 증명입니다.' });
     }
 
     // JWT 생성
     const token = jwt.sign(
       { user_id: user.user_id, user_number: user.user_number },
       process.env.JWT_SECRET,
-      { expiresIn: "1h" }
+      { expiresIn: '1h' }
     );
 
-    return res.status(200).json({ message: "로그인 성공", token });
+    return res.status(200).json({ message: '로그인 성공', token });
   } catch (error) {
-    console.error("데이터베이스 쿼리 오류:", error);
-    return res.status(500).json({ error: "서버 오류가 발생했습니다." });
+    console.error('데이터베이스 쿼리 오류:', error);
+    return res.status(500).json({ error: '서버 오류가 발생했습니다.' });
   } finally {
     client.release();
   }
