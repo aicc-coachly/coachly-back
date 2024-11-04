@@ -12,6 +12,7 @@ const app = express(); // express 모듈을 사용하기 위해 app 변수에 �
 const server = app.listen(PORT, () =>
   console.log(`Server is running on ${PORT}`)
 );
+
 const io = socketIo(server, {
   cors: {
     origin: "http://localhost:3000", // 클라이언트 주소
@@ -19,6 +20,7 @@ const io = socketIo(server, {
     allowedHeaders: ["my-custom-header", "Content-Type"], // 허용할 헤더
     credentials: true, // 쿠키 사용 여부
   },
+
 });
 
 // Socket.io 이벤트 처리
