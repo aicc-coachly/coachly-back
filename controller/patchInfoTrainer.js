@@ -1,9 +1,9 @@
-const database = require("../database/database");
+const database = require('../database/database');
 
 // 유효한 트레이너 번호인지 확인하는 함수
 const isValidTrainerNumber = async (trainer_number) => {
   const result = await database.query(
-    "SELECT * FROM trainers WHERE trainer_number = $1",
+    'SELECT * FROM trainers WHERE trainer_number = $1',
     [trainer_number]
   );
   return result.rows.length > 0;
@@ -25,7 +25,7 @@ exports.updateTrainerInfo = async (req, res) => {
   try {
     // 트레이너 존재 여부 확인
     if (!(await isValidTrainerNumber(trainer_number))) {
-      return res.status(404).json({ message: "Trainer not found" });
+      return res.status(404).json({ message: 'Trainer not found' });
     }
 
     // 트레이너 정보 업데이트
@@ -41,15 +41,16 @@ exports.updateTrainerInfo = async (req, res) => {
     );
 
     if (updatedTrainer.rows.length === 0) {
-      return res.status(404).json({ message: "Trainer not found or inactive" });
+      return res.status(404).json({ message: 'Trainer not found or inactive' });
     }
 
     res.status(200).json({
-      message: "Trainer basic information updated successfully",
+      status: 'success',
+      message: 'Trainer basic information updated successfully',
       trainer: updatedTrainer.rows[0],
     });
   } catch (error) {
-    console.error("Database query error:", error);
+    console.error('Database query error:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -60,7 +61,7 @@ exports.updateTrainerAddress = async (req, res) => {
 
   try {
     if (!(await isValidTrainerNumber(trainer_number))) {
-      return res.status(404).json({ message: "Trainer address not found" });
+      return res.status(404).json({ message: 'Trainer address not found' });
     }
 
     const updatedAddress = await updateDatabase(
@@ -77,15 +78,16 @@ exports.updateTrainerAddress = async (req, res) => {
         trainer_detail_address,
         trainer_number,
       ],
-      "Trainer address not found"
+      'Trainer address not found'
     );
 
     res.status(200).json({
-      message: "Trainer address updated successfully",
+      status: 'success',
+      message: 'Trainer address updated successfully',
       address: updatedAddress,
     });
   } catch (error) {
-    console.error("Database query error:", error);
+    console.error('Database query error:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -98,7 +100,7 @@ exports.updateTrainerPtAmount = async (req, res) => {
     if (!(await isValidTrainerNumber(trainer_number))) {
       return res
         .status(404)
-        .json({ message: "PT amount information not found" });
+        .json({ message: 'PT amount information not found' });
     }
 
     const updatedPtAmount = await updateDatabase(
@@ -110,15 +112,16 @@ exports.updateTrainerPtAmount = async (req, res) => {
        WHERE trainer_number = $4
        RETURNING *`,
       [option, amount, frequency, trainer_number],
-      "PT amount information not found"
+      'PT amount information not found'
     );
 
     res.status(200).json({
-      message: "PT amount information updated successfully",
+      status: 'success',
+      message: 'PT amount information updated successfully',
       ptAmount: updatedPtAmount,
     });
   } catch (error) {
-    console.error("Database query error:", error);
+    console.error('Database query error:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -131,7 +134,7 @@ exports.updateTrainerAccount = async (req, res) => {
     if (!(await isValidTrainerNumber(trainer_number))) {
       return res
         .status(404)
-        .json({ message: "Trainer account information not found" });
+        .json({ message: 'Trainer account information not found' });
     }
 
     const updatedAccount = await updateDatabase(
@@ -143,15 +146,16 @@ exports.updateTrainerAccount = async (req, res) => {
        WHERE trainer_number = $4
        RETURNING *`,
       [account, bank_name, account_name, trainer_number],
-      "Trainer account information not found"
+      'Trainer account information not found'
     );
 
     res.status(200).json({
-      message: "Trainer account information updated successfully",
+      status: 'success',
+      message: 'Trainer account information updated successfully',
       account: updatedAccount,
     });
   } catch (error) {
-    console.error("Database query error:", error);
+    console.error('Database query error:', error);
     res.status(500).json({ error: error.message });
   }
 };

@@ -86,9 +86,10 @@ exports.trainerSignup = async (req, res) => {
 
     await client.query('COMMIT');
 
-    return res
-      .status(200)
-      .json({ message: '트레이너가 성공적으로 등록되었습니다.' });
+    return res.status(200).json({
+      status: 'success',
+      message: '트레이너가 성공적으로 등록되었습니다.',
+    });
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('데이터베이스 쿼리 오류:', error);
@@ -129,7 +130,9 @@ exports.trainerLogin = async (req, res) => {
       { expiresIn: '1h' }
     );
 
-    return res.status(200).json({ message: '로그인 성공', token });
+    return res
+      .status(200)
+      .json({ status: 'success', message: '로그인 성공', token });
   } catch (error) {
     console.error('데이터베이스 쿼리 오류:', error);
     return res.status(500).json({ error: '서버 오류가 발생했습니다.' });
@@ -176,12 +179,10 @@ exports.userSignup = async (req, res) => {
 
     await client.query('COMMIT');
 
-    return res
-      .status(200)
-      .json({
-        status: 'success',
-        message: '사용자가 성공적으로 등록되었습니다.',
-      });
+    return res.status(200).json({
+      status: 'success',
+      message: '사용자가 성공적으로 등록되었습니다.',
+    });
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('데이터베이스 쿼리 오류:', error);
@@ -220,7 +221,9 @@ exports.userLogin = async (req, res) => {
       { expiresIn: '1h' }
     );
 
-    return res.status(200).json({ message: '로그인 성공', token });
+    return res
+      .status(200)
+      .json({ status: 'success', message: '로그인 성공', token });
   } catch (error) {
     console.error('데이터베이스 쿼리 오류:', error);
     return res.status(500).json({ error: '서버 오류가 발생했습니다.' });

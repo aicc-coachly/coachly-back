@@ -1,4 +1,4 @@
-const database = require("../database/database");
+const database = require('../database/database');
 
 exports.postPtPayment = async (req, res) => {
   const { amount_number, user_number, trainer_number, payment_option } =
@@ -7,7 +7,7 @@ exports.postPtPayment = async (req, res) => {
   const client = await database.connect();
 
   try {
-    await client.query("BEGIN");
+    await client.query('BEGIN');
 
     // PT 스케줄 생성
     const scheduleResult = await client.query(
@@ -25,22 +25,23 @@ exports.postPtPayment = async (req, res) => {
       [payment_option]
     );
 
-    await client.query("COMMIT");
+    await client.query('COMMIT');
 
     // 여기서 토스페이먼츠 결제 초기화 로직을 호출할 수 있습니다.
     // const paymentInitResult = await initializeTossPayment(pt_number, amount);
 
     res.status(201).json({
-      message: "PT schedule created and payment initiated",
+      status: 'success',
+      message: 'PT schedule created and payment initiated',
       pt_number: pt_number,
       // paymentInitResult: paymentInitResult // 토스페이먼츠 초기화 결과
     });
   } catch (error) {
-    await client.query("ROLLBACK");
-    console.error("Error creating PT schedule and initiating payment:", error);
+    await client.query('ROLLBACK');
+    console.error('Error creating PT schedule and initiating payment:', error);
     res
       .status(500)
-      .json({ error: "Failed to create PT schedule and initiate payment" });
+      .json({ error: 'Failed to create PT schedule and initiate payment' });
   } finally {
     client.release();
   }
@@ -54,9 +55,9 @@ exports.ptPaymentCompleted = async (req, res) => {
   const client = await database.connect();
 
   try {
-    await client.query("BEGIN");
+    await client.query('BEGIN');
 
-    if (status === "DONE") {
+    if (status === 'DONE') {
       // pt_payment 테이블 업데이트
       const paymentResult = await client.query(
         `UPDATE pt_payment SET payments_status = TRUE 
@@ -66,7 +67,7 @@ exports.ptPaymentCompleted = async (req, res) => {
       );
 
       if (paymentResult.rows.length === 0) {
-        throw new Error("Payment not found");
+        throw new Error('Payment not found');
       }
 
       const payment_number = paymentResult.rows[0].payment_number;
@@ -93,12 +94,12 @@ exports.ptPaymentCompleted = async (req, res) => {
       );
     }
 
-    await client.query("COMMIT");
-    res.status(200).send("Webhook processed successfully");
+    await client.query('COMMIT');
+    res.status(200).send('Webhook processed successfully');
   } catch (error) {
-    await client.query("ROLLBACK");
-    console.error("Payment webhook processing error:", error);
-    res.status(500).send("Error processing webhook");
+    await client.query('ROLLBACK');
+    console.error('Payment webhook processing error:', error);
+    res.status(500).send('Error processing webhook');
   } finally {
     client.release();
   }

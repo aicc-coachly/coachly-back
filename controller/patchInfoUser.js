@@ -1,4 +1,4 @@
-const database = require("../database/database");
+const database = require('../database/database');
 
 // 사용자 기본 정보 업데이트
 exports.updateUserInfo = async (req, res) => {
@@ -8,12 +8,12 @@ exports.updateUserInfo = async (req, res) => {
   try {
     // 유효한 user_number인지 확인
     const userCheck = await database.query(
-      "SELECT * FROM users WHERE user_number = $1",
+      'SELECT * FROM users WHERE user_number = $1',
       [user_number]
     );
 
     if (userCheck.rows.length === 0) {
-      return res.status(404).json({ error: "User not found" });
+      return res.status(404).json({ error: 'User not found' });
     }
 
     const result = await database.query(
@@ -22,11 +22,12 @@ exports.updateUserInfo = async (req, res) => {
     );
 
     return res.status(200).json({
-      message: "User information updated successfully",
+      status: 'success',
+      message: 'User information updated successfully',
       user: result.rows[0],
     });
   } catch (error) {
-    console.error("Database query error:", error);
+    console.error('Database query error:', error);
     return res.status(500).json({ error: error.message });
   }
 };
@@ -39,25 +40,26 @@ exports.updateUserAddress = async (req, res) => {
   try {
     // 유효한 user_number인지 확인
     const userCheck = await database.query(
-      "SELECT * FROM user_address WHERE user_number = $1",
+      'SELECT * FROM user_address WHERE user_number = $1',
       [user_number]
     );
 
     if (userCheck.rows.length === 0) {
-      return res.status(404).json({ error: "User address not found" });
+      return res.status(404).json({ error: 'User address not found' });
     }
 
     const result = await database.query(
-      "UPDATE user_address SET user_zipcode = COALESCE($1, user_zipcode), user_address = COALESCE($2, user_address), user_detail_address = COALESCE($3, user_detail_address), updated_at = CURRENT_TIMESTAMP WHERE user_number = $4 RETURNING *",
+      'UPDATE user_address SET user_zipcode = COALESCE($1, user_zipcode), user_address = COALESCE($2, user_address), user_detail_address = COALESCE($3, user_detail_address), updated_at = CURRENT_TIMESTAMP WHERE user_number = $4 RETURNING *',
       [user_zipcode, user_address, user_detail_address, user_number]
     );
 
     return res.status(200).json({
-      message: "User address updated successfully",
+      status: 'success',
+      message: 'User address updated successfully',
       address: result.rows[0],
     });
   } catch (error) {
-    console.error("Database query error:", error);
+    console.error('Database query error:', error);
     return res.status(500).json({ error: error.message });
   }
 };
@@ -82,14 +84,14 @@ exports.updateUserInbody = async (req, res) => {
   try {
     // 유효한 user_number인지 확인
     const userCheck = await database.query(
-      "SELECT * FROM user_inbody WHERE user_number = $1",
+      'SELECT * FROM user_inbody WHERE user_number = $1',
       [user_number]
     );
 
     if (userCheck.rows.length === 0) {
       return res
         .status(404)
-        .json({ error: "User inbody information not found" });
+        .json({ error: 'User inbody information not found' });
     }
 
     const result = await database.query(
@@ -124,11 +126,12 @@ exports.updateUserInbody = async (req, res) => {
     );
 
     return res.status(200).json({
-      message: "User inbody information updated successfully",
+      status: 'success',
+      message: 'User inbody information updated successfully',
       inbody: result.rows[0],
     });
   } catch (error) {
-    console.error("Database query error:", error);
+    console.error('Database query error:', error);
     return res.status(500).json({ error: error.message });
   }
 };
