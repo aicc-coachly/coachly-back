@@ -8,7 +8,12 @@ const storage = multer.diskStorage({
     cb(null, path.join(__dirname, "../uploads"));
   },
   filename: (req, file, cb) => {
-    cb(null, "trainer_" + Date.now() + path.extname(file.originalname));
+    const trainerName = req.body.name; // 트레이너 이름 가져오기
+    const formattedName = trainerName.replace(/ /g, "_"); // 공백을 언더스코어로 대체
+    cb(
+      null,
+      `${formattedName}_${Date.now()}${path.extname(file.originalname)}`
+    );
   },
 });
 
@@ -22,7 +27,7 @@ const {
 } = require("../controller/authController");
 
 // 트레이너 회원가입
-router.post("/trainer/signup", upload.single("trainerImage"), trainerSignup);
+router.post("/trainer/signup", upload.single("trainer_image"), trainerSignup);
 
 // 트레이너 로그인
 router.post("/trainer/login", trainerLogin);

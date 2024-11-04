@@ -18,13 +18,11 @@ exports.trainerSignup = async (req, res) => {
     trainer_zipcode,
     trainer_address,
     trainer_detail_address,
-    option,
-    amount,
-    frequency,
     account,
     bank_name,
     account_name,
     service_options,
+    price_options,
   } = req.body;
 
   const trainer_image = req.file ? req.file.path : null;
@@ -36,15 +34,20 @@ exports.trainerSignup = async (req, res) => {
       .json({ error: "서비스 옵션은 최대 2개까지 선택 가능합니다." });
   }
 
+  // 가격 옵션 유효성 검사
+  if (!Array.isArray(price_options) || price_options.length === 0) {
+    return res
+      .status(400)
+      .json({ error: "최소 하나의 가격 옵션이 필요합니다." });
+  }
+
   const client = await connectDatabase();
 
   try {
     await client.query("BEGIN");
 
-    // 비밀번호 해싱
     const hashedPass = await bcrypt.hash(pass, 10);
 
-    // 트레이너 기본 정보 삽입
     const trainerResult = await client.query(
       "INSERT INTO trainers (trainer_id, pass, name, gender, phone) VALUES ($1, $2, $3, $4, $5) RETURNING trainer_number",
       [trainer_id, hashedPass, name, gender, phone]
@@ -52,29 +55,36 @@ exports.trainerSignup = async (req, res) => {
 
     const trainer_number = trainerResult.rows[0].trainer_number;
 
-    // 트레이너 이미지 정보 삽입
     await client.query(
       "INSERT INTO trainer_image (image, resume) VALUES ($1, $2)",
       [trainer_image, resume]
     );
 
-    // 헬스장 주소 정보 삽입
     await client.query(
-      "INSERT INTO gym_address (trainer_zipcode, trainer_address, trainer_detail_address) VALUES ($1, $2, $3)",
-      [trainer_zipcode, trainer_address, trainer_detail_address]
+      "INSERT INTO gym_address (trainer_number, trainer_zipcode, trainer_address, trainer_detail_address) VALUES ($1, $2, $3, $4)",
+      [trainer_number, trainer_zipcode, trainer_address, trainer_detail_address]
     );
 
-    // PT 가격 정보 삽입
+    // 가격 정보 삽입
+    for (const option of price_options) {
+      const { option: optionName, amount, frequency } = JSON.parse(option);
+      await client.query(
+        "INSERT INTO pt_cost_option (trainer_number, option, amount, frequency) VALUES ($1, $2, $3, $4)",
+        [trainer_number, optionName, amount, frequency]
+      );
+    }
+
     await client.query(
-      "INSERT INTO pt_cost_option (option, amount, frequency) VALUES ($1, $2, $3)",
-      [option, amount, frequency]
+      "INSERT INTO trainer_bank_account (trainer_number, account, bank_name, account_name) VALUES ($1, $2, $3, $4)",
+      [trainer_number, account, bank_name, account_name]
     );
 
-    // 트레이너 계좌 정보 삽입
-    await client.query(
-      "INSERT INTO trainer_bank_account (account, bank_name, account_name) VALUES ($1, $2, $3)",
-      [account, bank_name, account_name]
-    );
+    for (const service_number of service_options) {
+      await client.query(
+        "INSERT INTO service_link (service_number, trainer_number) VALUES ($1, $2)",
+        [service_number, trainer_number]
+      );
+    }
 
     await client.query("COMMIT");
 

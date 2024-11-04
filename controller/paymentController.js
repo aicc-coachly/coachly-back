@@ -46,7 +46,7 @@ exports.postPtPayment = async (req, res) => {
   }
 };
 
-exports.postPtPaymentCompleted = async (req, res) => {
+exports.ptPaymentCompleted = async (req, res) => {
   const { paymentKey, orderId, status } = req.body;
 
   // 웹훅 검증 로직 (토스페이먼츠 문서 참조)

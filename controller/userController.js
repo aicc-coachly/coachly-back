@@ -106,9 +106,9 @@ exports.getUserInbody = async (req, res) => {
 
     const user_number = userResult.rows[0].user_number;
 
-    // 인바디 정보를 가져오는 쿼리 (user_number를 외래키로 사용)
+    // user_number를 사용하여 인바디 정보를 가져오는 쿼리
     const inbodyResult = await database.query(
-      "SELECT * FROM user_inbody WHERE user_inbody_number = $1", // user_inbody_number가 아닌 user_number를 사용해야 합니다
+      "SELECT * FROM user_inbody WHERE user_number = $1", // user_number로 수정
       [user_number]
     );
 
