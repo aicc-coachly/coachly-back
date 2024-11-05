@@ -61,11 +61,11 @@ exports.getUserPage = async (req, res) => {
       SELECT 
         u.user_number,
         u.user_id,
-        u.user_name,
-        u.user_email,
-        u.user_date_of_birth,
-        u.user_phone,
-        u.user_gender,
+        u.name,
+        u.email,
+        u.birth,
+        u.phone,
+        u.gender,
         a.user_zipcode,
         a.user_address,
         a.user_detail_address
