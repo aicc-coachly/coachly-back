@@ -16,7 +16,7 @@ const {
 } = require("../controller/patchInfoUser");
 
 // 인바디 정보 저장
-router.post("/inbody", postUserInbody);
+router.post("/inbody/:user_id", postUserInbody);
 
 // 모든 사용자 조회
 router.get("/users", getUsers);

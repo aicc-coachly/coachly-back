@@ -117,6 +117,7 @@ exports.trainerLogin = async (req, res) => {
 
     const trainer = result.rows[0];
     const isMatch = await bcrypt.compare(pass, trainer.pass);
+    const trainer_number = trainer.trainer_number;
 
     if (!isMatch) {
       return res.status(401).json({ error: "잘못된 자격 증명입니다." });
@@ -131,7 +132,9 @@ exports.trainerLogin = async (req, res) => {
       { expiresIn: "1h" }
     );
 
-    return res.status(200).json({ message: "로그인 성공", token });
+    return res
+      .status(200)
+      .json({ message: "로그인 성공", trainer_number, trainer_id, token });
   } catch (error) {
     console.error("데이터베이스 쿼리 오류:", error);
     return res.status(500).json({ error: "서버 오류가 발생했습니다." });
@@ -155,6 +158,7 @@ exports.userSignup = async (req, res) => {
   } = req.body;
 
   const client = await connectDatabase();
+  console.log("Received data:", req.body);
 
   try {
     await client.query("BEGIN");
@@ -219,7 +223,7 @@ exports.userLogin = async (req, res) => {
       { expiresIn: "1h" }
     );
 
-    return res.status(200).json({ message: "로그인 성공", token });
+    return res.status(200).json({ message: "로그인 성공", user_id, token });
   } catch (error) {
     console.error("데이터베이스 쿼리 오류:", error);
     return res.status(500).json({ error: "서버 오류가 발생했습니다." });
