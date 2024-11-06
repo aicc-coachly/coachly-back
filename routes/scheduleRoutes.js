@@ -7,6 +7,7 @@ const {
   completePaycheck,
   updatePtSchedule,
   deletePtSchedule,
+  getScheduleRecords,
 } = require("../controller/scheduleController");
 
 // PT 일정 등록
@@ -23,5 +24,8 @@ router.patch("/pt-schedules/:schedule_number", updatePtSchedule);
 
 // PT 일정 삭제
 router.delete("/pt-schedules/:schedule_number", deletePtSchedule);
+
+// PT 일정 가져오기
+router.get("/pt-schedules/:pt_number", getScheduleRecords);
 
 module.exports = router;

@@ -55,9 +55,10 @@ exports.trainerSignup = async (req, res) => {
 
     const trainer_number = trainerResult.rows[0].trainer_number;
 
+    // 트레이너 이미지와 이력서 저장
     await client.query(
-      "INSERT INTO trainer_image (image, resume) VALUES ($1, $2)",
-      [trainer_image, resume]
+      "INSERT INTO trainer_image (trainer_number, image, resume) VALUES ($1, $2, $3)",
+      [trainer_number, trainer_image, resume]
     );
 
     await client.query(
@@ -79,6 +80,7 @@ exports.trainerSignup = async (req, res) => {
       [trainer_number, account, bank_name, account_name]
     );
 
+    // 서비스 옵션 삽입
     for (const service_number of service_options) {
       await client.query(
         "INSERT INTO service_link (service_number, trainer_number) VALUES ($1, $2)",

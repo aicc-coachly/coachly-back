@@ -31,32 +31,41 @@ exports.getTrainer = async (req, res) => {
   try {
     const result = await database.query(
       `SELECT 
-      t.*, 
-      ARRAY_AGG(DISTINCT jsonb_build_object(
-          'option', p.option, 
-          'amount', p.amount, 
-          'frequency', p.frequency
-      )) AS pt_cost_options, 
-      g.trainer_address, 
-      g.trainer_detail_address, 
-      ti.resume AS trainer_resume,
-      ARRAY_AGG(DISTINCT s.service_name) AS service_options
-  FROM 
-      trainers t
-  LEFT JOIN 
-      pt_cost_option p ON t.trainer_number = p.trainer_number
-  LEFT JOIN 
-      gym_address g ON t.trainer_number = g.trainer_number
-  LEFT JOIN 
-      trainer_image ti ON t.trainer_number = ti.trainer_number
-  LEFT JOIN 
-      service_link sl ON t.trainer_number = sl.trainer_number
-  LEFT JOIN 
-      service_option s ON sl.service_number = s.service_number
-  WHERE 
-      t.trainer_number = $1
-  GROUP BY 
-      t.trainer_number, g.trainer_address, g.trainer_detail_address, ti.resume`,
+        t.*, 
+        ARRAY_AGG(DISTINCT jsonb_build_object(
+            'option', p.option, 
+            'amount', p.amount, 
+            'frequency', p.frequency
+        )) AS pt_cost_options, 
+        g.trainer_address, 
+        g.trainer_detail_address, 
+        g.trainer_zipcode, 
+        ti.resume AS trainer_resume,
+        ti.image AS trainer_image,  
+        ARRAY_AGG(DISTINCT s.service_name) AS service_options,
+        jsonb_build_object(
+          'bank_name', ba.bank_name,
+          'account', ba.account,
+          'account_name', ba.account_name
+        ) AS bank_account  -- 계좌 정보 추가
+      FROM 
+        trainers t
+      LEFT JOIN 
+        pt_cost_option p ON t.trainer_number = p.trainer_number
+      LEFT JOIN 
+        gym_address g ON t.trainer_number = g.trainer_number
+      LEFT JOIN 
+        trainer_image ti ON t.trainer_number = ti.trainer_number
+      LEFT JOIN 
+        service_link sl ON t.trainer_number = sl.trainer_number
+      LEFT JOIN 
+        service_option s ON sl.service_number = s.service_number
+      LEFT JOIN 
+        trainer_bank_account ba ON t.trainer_number = ba.trainer_number  -- 계좌 정보 조인
+      WHERE 
+        t.trainer_number = $1
+      GROUP BY 
+        t.trainer_number, g.trainer_address, g.trainer_detail_address, g.trainer_zipcode, ti.resume, ti.image, ba.bank_name, ba.account, ba.account_name`,
       [trainer_number]
     );
 

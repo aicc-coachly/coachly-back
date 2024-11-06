@@ -42,7 +42,8 @@ CREATE TABLE paycheck_record (
 );
 
 CREATE TABLE payment_completed (
-    payment_id_completed SERIAL PRIMARY KEY NOT NULL,
     payments_key VARCHAR(50) UNIQUE,
-    payment_number INT REFERENCES pt_payment(payment_number)
+    order_id VARCHAR(50) NOT NULL,  -- 주문 ID 컬럼 추가
+    amount DECIMAL(10, 2) NOT NULL,  -- 결제 금액 컬럼 추가, 소수점 2자리까지 허용
+    payment_number INT REFERENCES pt_payment(payment_number),
 );
