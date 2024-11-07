@@ -15,10 +15,10 @@ exports.postPtPayment = async (req, res) => {
 
     // PT 스케줄 생성
     const scheduleResult = await client.query(
-      `INSERT INTO pt_schedule (status, user_number, trainer_number) 
-       VALUES ($1, $2, $3) 
+      `INSERT INTO pt_schedule (status, user_number, trainer_number,amount_number) 
+       VALUES ($1, $2, $3,$4) 
        RETURNING pt_number`,
-      ['progress', user_number, trainer_number]
+      ['progress', user_number, trainer_number, payment_option]
     );
     console.log('PT 스케줄 생성 결과:', scheduleResult.rows);
 
