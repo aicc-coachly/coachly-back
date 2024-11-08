@@ -47,6 +47,9 @@ app.use(cors()); //htpp, https 프로토콜을 사용하는 서버 간의 통신
 app.use(express.json()); // express 모듈의 json() 메소드를 사용한다.
 app.use(bodyParser.json());
 
+app.use(express.static(path.join(__dirname, "public")));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 app.use(require("./routes/authRoutes"));
 app.use(require("./routes/chatRoutes"));
 app.use(require("./routes/trainerRoutes"));

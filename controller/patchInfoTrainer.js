@@ -20,7 +20,7 @@ const updateDatabase = async (query, params, notFoundMessage) => {
 
 exports.updateTrainerInfo = async (req, res) => {
   const { trainer_number } = req.params;
-  const { name, phone, gender } = req.body; // birth는 제거
+  const { name, phone } = req.body; // birth는 제거
 
   try {
     // 트레이너 존재 여부 확인
@@ -33,11 +33,10 @@ exports.updateTrainerInfo = async (req, res) => {
       `UPDATE trainers 
        SET name = COALESCE($1, name),
            phone = COALESCE($2, phone),
-           gender = COALESCE($3, gender),
            updated_at = CURRENT_TIMESTAMP
-       WHERE trainer_number = $4 AND status = TRUE
+       WHERE trainer_number = $3 AND status = 'active'
        RETURNING *`,
-      [name, phone, gender, trainer_number]
+      [name, phone, trainer_number]
     );
 
     if (updatedTrainer.rows.length === 0) {
@@ -103,13 +102,12 @@ exports.updateTrainerPtAmount = async (req, res) => {
 
     const updatedPtAmount = await updateDatabase(
       `UPDATE pt_cost_option 
-       SET option = COALESCE($1, option),
-           amount = COALESCE($2, amount),
-           frequency = COALESCE($3, frequency),
+       SET amount = COALESCE($1, amount),
+           frequency = COALESCE($2, frequency),
            updated_at = CURRENT_TIMESTAMP
-       WHERE trainer_number = $4
+       WHERE trainer_number = $3 AND option = $4
        RETURNING *`,
-      [option, amount, frequency, trainer_number],
+      [amount, frequency, trainer_number, option],
       "PT amount information not found"
     );
 
@@ -149,6 +147,78 @@ exports.updateTrainerAccount = async (req, res) => {
     res.status(200).json({
       message: "Trainer account information updated successfully",
       account: updatedAccount,
+    });
+  } catch (error) {
+    console.error("Database query error:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.updateTrainerImage = async (req, res) => {
+  const { trainer_number } = req.params;
+  const { resume } = req.body;
+  const trainer_image = req.file ? req.file.path : null; // 이미지 파일 업로드 경로
+
+  try {
+    // 트레이너 존재 여부 확인
+    if (!(await isValidTrainerNumber(trainer_number))) {
+      return res.status(404).json({ message: "Trainer not found" });
+    }
+
+    // 트레이너 이미지 및 이력서 업데이트
+    const updatedImageAndResume = await updateDatabase(
+      `UPDATE trainer_image 
+       SET image = COALESCE($1, image),
+           resume = COALESCE($2, resume),
+           updated_at = CURRENT_TIMESTAMP
+       WHERE trainer_number = $3
+       RETURNING *`,
+      [trainer_image, resume, trainer_number],
+      "Trainer image and resume information not found"
+    );
+    // console.log(updatedImageAndResume);
+
+    res.status(200).json({
+      message: "Trainer image and resume updated successfully",
+      data: updatedImageAndResume,
+    });
+  } catch (error) {
+    console.error("Database query error:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.updateTrainerStatus = async (req, res) => {
+  const { trainer_number } = req.params;
+  const { status } = req.body;
+
+  if (!["active", "inactive"].includes(status)) {
+    return res.status(400).json({ message: "Invalid status value" });
+  }
+
+  try {
+    // 트레이너 존재 여부 확인
+    if (!(await isValidTrainerNumber(trainer_number))) {
+      return res.status(404).json({ message: "Trainer not found" });
+    }
+
+    // 트레이너 상태 업데이트
+    const updatedTrainer = await database.query(
+      `UPDATE trainers 
+       SET status = $1,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE trainer_number = $2
+       RETURNING *`,
+      [status, trainer_number]
+    );
+
+    if (updatedTrainer.rows.length === 0) {
+      return res.status(404).json({ message: "Trainer not found" });
+    }
+
+    res.status(200).json({
+      message: `Trainer status updated to ${status} successfully`,
+      trainer: updatedTrainer.rows[0],
     });
   } catch (error) {
     console.error("Database query error:", error);

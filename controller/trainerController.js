@@ -8,7 +8,8 @@ exports.getTrainers = async (req, res) => {
         p.amount AS pt_cost_option, 
         g.trainer_address, 
         g.trainer_detail_address,
-        ti.resume AS trainer_resume,
+        ti.resume AS resume,
+        ti.image AS image, -- 이미지 필드 추가
         ARRAY_AGG(s.service_name) AS service_options
       FROM trainers t
       LEFT JOIN pt_cost_option p ON t.trainer_number = p.trainer_number
@@ -16,11 +17,20 @@ exports.getTrainers = async (req, res) => {
       LEFT JOIN trainer_image ti ON t.trainer_number = ti.trainer_number
       LEFT JOIN service_link sl ON t.trainer_number = sl.trainer_number
       LEFT JOIN service_option s ON sl.service_number = s.service_number
-      GROUP BY t.trainer_number, p.amount, g.trainer_address, g.trainer_detail_address, ti.resume
+      GROUP BY 
+        t.trainer_number, 
+        p.amount, 
+        g.trainer_address, 
+        g.trainer_detail_address, 
+        ti.resume, 
+        ti.image -- 추가된 필드에 대한 GROUP BY
     `);
 
+    console.log("쿼리 결과:", result); // 쿼리 결과 확인
     return res.status(200).json(result.rows);
   } catch (error) {
+    console.error("쿼리 오류:", error); // 에러 메시지 확인
+
     return res.status(500).json({ msg: "Get Trainers Fail: " + error });
   }
 };
@@ -40,8 +50,8 @@ exports.getTrainer = async (req, res) => {
         g.trainer_address, 
         g.trainer_detail_address, 
         g.trainer_zipcode, 
-        ti.resume AS trainer_resume,
-        ti.image AS trainer_image,  
+        ti.resume AS resume,
+        ti.image AS image,  
         ARRAY_AGG(DISTINCT s.service_name) AS service_options,
         jsonb_build_object(
           'bank_name', ba.bank_name,
@@ -165,7 +175,7 @@ exports.deleteTrainer = async (req, res) => {
   try {
     // 트레이너 상태를 false로 업데이트 및 delete_at 설정
     const result = await database.query(
-      "UPDATE trainers SET status = FALSE, delete_at = CURRENT_TIMESTAMP WHERE trainer_number = $1 RETURNING *",
+      "UPDATE trainers SET status = deleted, delete_at = CURRENT_TIMESTAMP WHERE trainer_number = $1 RETURNING *",
       [trainer_number]
     );
 

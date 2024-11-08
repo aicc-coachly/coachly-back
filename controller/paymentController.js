@@ -1,36 +1,47 @@
 const database = require("../database/database");
+const got = require("got"); // got v11 사용
 
+// PT 결제 생성 함수
 exports.postPtPayment = async (req, res) => {
-  const { amount_number, user_number, trainer_number, payment_option } =
-    req.body;
+  const { user_number, trainer_number, payment_option } = req.body;
 
   const client = await database.connect();
 
   try {
+    console.log("데이터베이스 연결 성공");
+
     await client.query("BEGIN");
+    console.log("트랜잭션 시작");
 
     // PT 스케줄 생성
     const scheduleResult = await client.query(
-      `INSERT INTO pt_schedule (status, amount_number, user_number, trainer_number) 
-       VALUES ('progress', $1, $2, $3) 
+      `INSERT INTO pt_schedule (status, user_number, trainer_number) 
+       VALUES ($1, $2, $3) 
        RETURNING pt_number`,
-      [amount_number, user_number, trainer_number]
+      ["progress", user_number, trainer_number]
     );
+    console.log("PT 스케줄 생성 결과:", scheduleResult.rows);
 
     const pt_number = scheduleResult.rows[0].pt_number;
 
-    // 결제 정보 생성
-    await client.query(
-      `INSERT INTO pt_payment (payment_option, pt_number) 
-       VALUES ($1, $2)`,
-      [payment_option, pt_number]
+    // 결제 정보 생성 및 payment_number 반환
+    const paymentResult = await client.query(
+      `INSERT INTO pt_payment (payment_option, pt_number, payments_status) 
+       VALUES ($1, $2, $3)
+       RETURNING payment_number`,
+      [payment_option, pt_number, true]
     );
+    console.log("PT 결제 정보 생성 결과:", paymentResult.rows);
+
+    const payment_number = paymentResult.rows[0].payment_number;
 
     await client.query("COMMIT");
+    console.log("트랜잭션 커밋 성공");
 
     res.status(201).json({
       message: "PT schedule created and payment initiated",
       pt_number: pt_number,
+      payment_number: payment_number,
     });
   } catch (error) {
     await client.query("ROLLBACK");
@@ -43,21 +54,64 @@ exports.postPtPayment = async (req, res) => {
   }
 };
 
+// PT 결제 완료 및 시크릿 키 검증 함수
 exports.ptPaymentCompleted = async (req, res) => {
-  const { paymentKey, orderId, amount, status } = req.body;
+  const { paymentKey, orderId, amount, ptNumber } = req.body;
+  console.log("Received data from client:", { paymentKey, orderId, amount });
 
+  if (!paymentKey || !orderId || !amount) {
+    console.log("Missing required parameters");
+    res.status(400).json({ error: "Missing required parameters" });
+    return;
+  }
+  const secretKey = process.env.WIDGET_SECRET_KEY;
+  const authHeader = "Basic " + Buffer.from(secretKey + ":").toString("base64");
   const client = await database.connect();
+
+  let response; // response를 try 블록 외부에 선언
 
   try {
     await client.query("BEGIN");
+    console.log("Transaction started");
 
-    if (status === "DONE") {
-      // pt_payment 테이블 업데이트
+    // TossPayments API 호출로 결제 검증
+    try {
+      response = await got.post(
+        "https://api.tosspayments.com/v1/payments/confirm",
+        {
+          headers: {
+            Authorization: authHeader,
+            "Content-Type": "application/json",
+          },
+          json: {
+            paymentKey,
+            orderId,
+            amount: parseInt(amount),
+          },
+          responseType: "json",
+        }
+      );
+      console.log("TossPayments API Response:", response.body);
+    } catch (error) {
+      console.error(
+        "Payment processing error response:",
+        error.response ? error.response.body : error.message
+      );
+      await client.query("ROLLBACK");
+      res
+        .status(500)
+        .json({ error: "Failed to verify payment with TossPayments" });
+      return;
+    }
+
+    // TossPayments 응답 확인 후 성공 처리
+    if (response && response.body.status === "DONE") {
+      console.log("Payment confirmed by TossPayments");
       const paymentResult = await client.query(
-        `UPDATE pt_payment SET payments_status = TRUE 
+        `UPDATE pt_payment SET payments_status = TRUE
          WHERE pt_number = $1
          RETURNING payment_number`,
-        [orderId] // 여기서 orderId는 pt_number와 동일하다고 가정
+        [ptNumber]
       );
 
       if (paymentResult.rows.length === 0) {
@@ -66,34 +120,32 @@ exports.ptPaymentCompleted = async (req, res) => {
 
       const payment_number = paymentResult.rows[0].payment_number;
 
-      // payment_completed 테이블에 데이터 삽입
       await client.query(
-        `INSERT INTO payment_completed (payments_key, order_id, amount, payment_number) 
-         VALUES ($1, $2, $3, $4)`,
-        [paymentKey, orderId, amount, payment_number]
+        `INSERT INTO payment_completed (payments_key,payment_number, order_id, amount) 
+         VALUES ($1, $2, $3,$4)`,
+        [paymentKey, payment_number, orderId, amount]
       );
 
-      // pt_schedule 상태 업데이트
-      await client.query(
-        `UPDATE pt_schedule SET status = 'completed' 
-         WHERE pt_number = $1`,
-        [orderId]
-      );
+      await client.query("COMMIT");
+      console.log("Transaction committed successfully");
+      res
+        .status(200)
+        .json({ message: "Payment processed successfully", payment_number });
     } else {
-      // 결제 실패 처리
+      // 결제 실패 시 처리
       await client.query(
         `UPDATE pt_schedule SET status = 'cancelled' 
          WHERE pt_number = $1`,
         [orderId]
       );
+      await client.query("COMMIT");
+      console.log("Payment failed");
+      res.status(400).json({ message: "Payment failed" });
     }
-
-    await client.query("COMMIT");
-    res.status(200).send("Webhook processed successfully");
   } catch (error) {
     await client.query("ROLLBACK");
-    console.error("Payment webhook processing error:", error);
-    res.status(500).send("Error processing webhook");
+    console.error("Payment processing error:", error.message);
+    res.status(500).json({ error: "Error processing payment" });
   } finally {
     client.release();
   }

@@ -25,7 +25,8 @@ exports.trainerSignup = async (req, res) => {
     price_options,
   } = req.body;
 
-  const trainer_image = req.file ? req.file.path : null;
+  // Multer에서 업로드된 파일의 경로를 상대 경로로 변환
+  const trainer_image = req.file ? `uploads/${req.file.filename}` : null;
 
   // 서비스 옵션 유효성 검사
   if (!Array.isArray(service_options) || service_options.length > 2) {
