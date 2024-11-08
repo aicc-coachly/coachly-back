@@ -15,10 +15,10 @@ exports.postPtPayment = async (req, res) => {
 
     // PT 스케줄 생성
     const scheduleResult = await client.query(
-      `INSERT INTO pt_schedule (status, user_number, trainer_number) 
-       VALUES ($1, $2, $3) 
+      `INSERT INTO pt_schedule (status, user_number, trainer_number,amount_number) 
+       VALUES ($1, $2, $3,$4) 
        RETURNING pt_number`,
-      ["progress", user_number, trainer_number]
+      ['progress', user_number, trainer_number, payment_option]
     );
     console.log("PT 스케줄 생성 결과:", scheduleResult.rows);
 
@@ -39,16 +39,16 @@ exports.postPtPayment = async (req, res) => {
     console.log("트랜잭션 커밋 성공");
 
     res.status(201).json({
-      message: "PT schedule created and payment initiated",
+      message: 'PT schedule created and payment initiated',
       pt_number: pt_number,
       payment_number: payment_number,
     });
   } catch (error) {
-    await client.query("ROLLBACK");
-    console.error("Error creating PT schedule and initiating payment:", error);
+    await client.query('ROLLBACK');
+    console.error('Error creating PT schedule and initiating payment:', error);
     res
       .status(500)
-      .json({ error: "Failed to create PT schedule and initiate payment" });
+      .json({ error: 'Failed to create PT schedule and initiate payment' });
   } finally {
     client.release();
   }
@@ -115,7 +115,7 @@ exports.ptPaymentCompleted = async (req, res) => {
       );
 
       if (paymentResult.rows.length === 0) {
-        throw new Error("Payment not found");
+        throw new Error('Payment not found');
       }
 
       const payment_number = paymentResult.rows[0].payment_number;
