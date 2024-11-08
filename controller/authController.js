@@ -25,7 +25,8 @@ exports.trainerSignup = async (req, res) => {
     price_options,
   } = req.body;
 
-  const trainer_image = req.file ? req.file.path : null;
+  // Multer에서 업로드된 파일의 경로를 상대 경로로 변환
+  const trainer_image = req.file ? `uploads/${req.file.filename}` : null;
 
   // 서비스 옵션 유효성 검사
   if (!Array.isArray(service_options) || service_options.length > 2) {
@@ -55,9 +56,10 @@ exports.trainerSignup = async (req, res) => {
 
     const trainer_number = trainerResult.rows[0].trainer_number;
 
+    // 트레이너 이미지와 이력서 저장
     await client.query(
-      "INSERT INTO trainer_image (image, resume) VALUES ($1, $2)",
-      [trainer_image, resume]
+      "INSERT INTO trainer_image (trainer_number, image, resume) VALUES ($1, $2, $3)",
+      [trainer_number, trainer_image, resume]
     );
 
     await client.query(
@@ -79,6 +81,7 @@ exports.trainerSignup = async (req, res) => {
       [trainer_number, account, bank_name, account_name]
     );
 
+    // 서비스 옵션 삽입
     for (const service_number of service_options) {
       await client.query(
         "INSERT INTO service_link (service_number, trainer_number) VALUES ($1, $2)",

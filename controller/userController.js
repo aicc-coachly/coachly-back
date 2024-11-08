@@ -13,11 +13,18 @@ exports.postUserInbody = async (req, res) => {
     user_total_body_water,
     user_protein,
     user_measurement_date,
+    user_number, // 유저 넘버 추가
   } = req.body;
 
   try {
     await database.query(
-      "INSERT INTO user_inbody (user_height, user_weight, user_body_fat_percentage, user_body_fat_mass, user_muscle_mass, user_metabolic_rate, user_abdominal_fat_amount, user_visceral_fat_level, user_total_body_water, user_protein, user_measurement_date) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
+      `INSERT INTO user_inbody 
+        (user_height, user_weight, user_body_fat_percentage, 
+         user_body_fat_mass, user_muscle_mass, user_metabolic_rate, 
+         user_abdominal_fat_amount, user_visceral_fat_level, 
+         user_total_body_water, user_protein, user_measurement_date, user_number) 
+       VALUES 
+        ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
       [
         user_height,
         user_weight,
@@ -30,6 +37,7 @@ exports.postUserInbody = async (req, res) => {
         user_total_body_water,
         user_protein,
         user_measurement_date,
+        user_number, // 유저 넘버 추가
       ]
     );
 

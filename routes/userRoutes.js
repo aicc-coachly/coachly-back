@@ -43,6 +43,6 @@ router.patch("/user/:user_number/info", updateUserInfo);
 router.patch("/user/:user_number/address", updateUserAddress);
 
 // 사용자 인바디 정보 업데이트
-router.patch("/user/:user_number/inbody", updateUserInbody);
+router.patch("/inbody/:user_inbody_number", updateUserInbody);
 
 module.exports = router;
