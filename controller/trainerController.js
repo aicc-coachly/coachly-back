@@ -5,32 +5,33 @@ exports.getTrainers = async (req, res) => {
     const result = await database.query(`
       SELECT 
         t.*, 
-        p.amount AS pt_cost_option, 
+        ARRAY_AGG(DISTINCT jsonb_build_object(
+            'amount_number', p.amount_number,  -- amount_number 추가
+            'option', p.option, 
+            'amount', p.amount, 
+            'frequency', p.frequency
+        )) AS pt_cost_options,  -- 가격 옵션 필드 추가
         g.trainer_address, 
         g.trainer_detail_address,
         ti.resume AS resume,
         ti.image AS image, -- 이미지 필드 추가
-        ARRAY_AGG(s.service_name) AS service_options
+        ARRAY_AGG(DISTINCT s.service_name) AS service_options
       FROM trainers t
       LEFT JOIN pt_cost_option p ON t.trainer_number = p.trainer_number
       LEFT JOIN gym_address g ON t.trainer_number = g.trainer_number
       LEFT JOIN trainer_image ti ON t.trainer_number = ti.trainer_number
       LEFT JOIN service_link sl ON t.trainer_number = sl.trainer_number
       LEFT JOIN service_option s ON sl.service_number = s.service_number
-      GROUP BY 
+      GROUP BY
         t.trainer_number, 
-        p.amount, 
         g.trainer_address, 
         g.trainer_detail_address, 
         ti.resume, 
         ti.image -- 추가된 필드에 대한 GROUP BY
     `);
 
-    console.log("쿼리 결과:", result); // 쿼리 결과 확인
     return res.status(200).json(result.rows);
   } catch (error) {
-    console.error("쿼리 오류:", error); // 에러 메시지 확인
-
     return res.status(500).json({ msg: "Get Trainers Fail: " + error });
   }
 };

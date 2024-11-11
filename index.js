@@ -36,7 +36,9 @@ io.on("connection", (socket) => {
     io.to(message.roomId).emit("messageReceived", message); // 특정 방으로 메시지 전송
   });
 
-  socket.on('leaveRoom', (roomId) => {
+
+  socket.on("leaveRoom", (roomId) => {
+
     socket.leave(roomId);
     console.log(`User left room: ${roomId}`);
   });
