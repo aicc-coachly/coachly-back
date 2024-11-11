@@ -2,6 +2,13 @@ const path = require("path");
 const { spawn } = require("child_process");
 const database = require("../database/database");
 
+let io; // io 객체를 저장할 변수
+
+// io 객체 초기화 함수
+exports.initializeIo = (socketIo) => {
+  io = socketIo;
+};
+
 // AI 채팅 요청 함수
 exports.AiChatRequest = (data) => {
   const { question, user_id } = data;
@@ -30,64 +37,34 @@ exports.AiChatRequest = (data) => {
   });
 };
 
-// 채팅방 생성
 exports.createChatRoom = async (req, res) => {
-  const { user_number, trainer_number, type } = req.body;
+  const { user_number, trainer_number } = req.body;
   try {
-    const query = type === "ai"
-      ? "INSERT INTO chat_room (user_number, type) VALUES ($1, $2) RETURNING *"
-      : "INSERT INTO chat_room (user_number, trainer_number, type) VALUES ($1, $2, $3) RETURNING *";
+    const isAIChat = !trainer_number;
+    const query = isAIChat
+      ? "INSERT INTO chat_room (user_number) VALUES ($1) RETURNING *"
+      : "INSERT INTO chat_room (user_number, trainer_number) VALUES ($1, $2) RETURNING *";
 
-    const values = type === "ai" ? [user_number, type] : [user_number, trainer_number, type];
+    const values = isAIChat ? [user_number] : [user_number, trainer_number];
     const result = await database.query(query, values);
     const roomId = result.rows[0].room_id;
 
-    // AI 채팅방 또는 트레이너 채팅방 고정 메시지 설정
     const fixedMessage = {
       roomId,
-      content: type === "ai" ? "안녕하세요! AI와의 채팅방입니다. 궁금한 것을 물어보세요!" : "트레이너와의 채팅방입니다. 질문을 해보세요!",
-      senderName: type === "ai" ? "AI 시스템" : "시스템",
+      content: isAIChat
+        ? "안녕하세요! AI와의 채팅방입니다. 궁금한 것을 물어보세요!"
+        : "트레이너와의 채팅방입니다. 질문을 해보세요!",
+      senderName: isAIChat ? "AI 시스템" : "시스템",
       timestamp: new Date(),
     };
 
-    // 고정 메시지를 방에 전송
-    io.to(roomId).emit("messageReceived", fixedMessage);
+    io.to(roomId).emit("messageReceived", fixedMessage); // io 사용
     res.status(201).json(result.rows[0]);
   } catch (error) {
+    console.error("Error creating chat room:", error);
     res.status(500).json({ error: error.message });
   }
 };
-
-// 메시지 전송
-exports.sendMessage = async (req, res) => {
-  const { room_id } = req.params;
-  const { content } = req.body;
-  const sender_number = req.params.id;
-  const sender_name = req.params.role === "trainer" ? req.user.name : req.body.sender_name;
-
-  try {
-    const roomResult = await database.query("SELECT type FROM chat_room WHERE room_id = $1", [room_id]);
-    if (roomResult.rows.length === 0) {
-      return res.status(404).json({ error: "Chat room not found" });
-    }
-
-    const roomType = roomResult.rows[0].type;
-
-    if (roomType === "ai") {
-      // AI 채팅방일 경우 AI 응답 생성
-      const aiResponse = await exports.AiChatRequest({ question: content, user_id: sender_number });
-      await database.query("INSERT INTO chat_message (sender_name, content, room_id) VALUES ($1, $2, $3)", [sender_name, content, room_id]);
-      res.status(200).json(aiResponse);
-    } else {
-      // 일반 채팅방 메시지 저장
-      const result = await database.query("INSERT INTO chat_message (sender_name, content, room_id) VALUES ($1, $2, $3) RETURNING *", [sender_name, content, room_id]);
-      res.status(201).json(result.rows[0]);
-    }
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
 // 메시지 읽음 상태 업데이트
 exports.readMessage = async (req, res) => {
   const { message_number } = req.params;
