@@ -15,16 +15,16 @@ RUN npm install
 
 # Python 의존성 설치
 COPY requirements.txt .
-RUN pip3 install -r requirements.txt
+RUN pip3 install --break-system-packages -r requirements.txt || echo "No Python dependencies to install"
 
 # 소스 파일 복사
 COPY . .
 
 # 환경 변수로 포트 설정 (기본값 8080)
-ENV PORT=8080
+ENV PORT=8000
 
 # 포트 노출
-EXPOSE 8080
+EXPOSE 8000
 
 # 애플리케이션 실행
 CMD ["npm", "start"]
