@@ -3,7 +3,8 @@ const got = require("got"); // got v11 사용
 
 // PT 결제 생성 함수
 exports.postPtPayment = async (req, res) => {
-  const { user_number, trainer_number, payment_option } = req.body;
+  const { user_number, trainer_number, payment_option, amount_number } =
+    req.body;
 
   const client = await database.connect();
 
@@ -15,10 +16,10 @@ exports.postPtPayment = async (req, res) => {
 
     // PT 스케줄 생성
     const scheduleResult = await client.query(
-      `INSERT INTO pt_schedule (status, user_number, trainer_number,amount_number) 
-       VALUES ($1, $2, $3,$4) 
+      `INSERT INTO pt_schedule (status, user_number, trainer_number, amount_number) 
+       VALUES ($1, $2, $3, $4) 
        RETURNING pt_number`,
-      ['progress', user_number, trainer_number, payment_option]
+      ["progress", user_number, trainer_number, amount_number]
     );
     console.log("PT 스케줄 생성 결과:", scheduleResult.rows);
 
@@ -36,19 +37,20 @@ exports.postPtPayment = async (req, res) => {
     const payment_number = paymentResult.rows[0].payment_number;
 
     await client.query("COMMIT");
+    console.log("Request Body:", req.body);
     console.log("트랜잭션 커밋 성공");
 
     res.status(201).json({
-      message: 'PT schedule created and payment initiated',
+      message: "PT schedule created and payment initiated",
       pt_number: pt_number,
       payment_number: payment_number,
     });
   } catch (error) {
-    await client.query('ROLLBACK');
-    console.error('Error creating PT schedule and initiating payment:', error);
+    await client.query("ROLLBACK");
+    console.error("Error creating PT schedule and initiating payment:", error);
     res
       .status(500)
-      .json({ error: 'Failed to create PT schedule and initiate payment' });
+      .json({ error: "Failed to create PT schedule and initiate payment" });
   } finally {
     client.release();
   }
@@ -115,7 +117,7 @@ exports.ptPaymentCompleted = async (req, res) => {
       );
 
       if (paymentResult.rows.length === 0) {
-        throw new Error('Payment not found');
+        throw new Error("Payment not found");
       }
 
       const payment_number = paymentResult.rows[0].payment_number;
@@ -152,31 +154,36 @@ exports.ptPaymentCompleted = async (req, res) => {
 };
 
 exports.getPtSchedule = async (req, res) => {
-  const { user_number, trainer_number, amount_number } = req.params;
+  const { user_number, trainer_number } = req.query; // 쿼리 파라미터로 받기
+
+  if (!user_number && !trainer_number) {
+    return res
+      .status(400)
+      .json({ error: "유저 번호 또는 트레이너 번호가 필요합니다." });
+  }
 
   try {
     const result = await database.query(
       `SELECT 
-        ps.pt_number,
-        ps.created_at,
-        ps.status,
-        u.name AS user_name,    -- 유저 이름
-        t.name AS trainer_name, -- 트레이너 이름
-        p.amount AS amount,     -- 가격
-        p.frequency AS frequency -- 횟수
-      FROM 
-        pt_schedule ps
-      LEFT JOIN 
-        users u ON ps.user_number = u.user_number
-      LEFT JOIN 
-        trainers t ON ps.trainer_number = t.trainer_number
-      LEFT JOIN 
-        pt_cost_option p ON ps.amount_number = p.amount_number
-      WHERE 
-        ps.user_number = $1 AND 
-        ps.trainer_number = $2 AND 
-        ps.amount_number = $3`,
-      [user_number, trainer_number, amount_number]
+    ps.pt_number,
+    ps.created_at,
+    ps.status,
+    u.name AS user_name,
+    u.user_number,              -- user_number 추가
+    t.name AS trainer_name,
+    p.amount AS amount,
+    p.frequency AS frequency
+  FROM 
+    pt_schedule ps
+  LEFT JOIN 
+    users u ON ps.user_number = u.user_number
+  LEFT JOIN 
+    trainers t ON ps.trainer_number = t.trainer_number
+  LEFT JOIN 
+    pt_cost_option p ON ps.amount_number = p.amount_number
+  WHERE 
+    (ps.user_number = $1 OR ps.trainer_number = $2)`,
+      [user_number, trainer_number]
     );
 
     if (result.rows.length === 0) {

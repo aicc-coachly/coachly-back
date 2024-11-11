@@ -60,7 +60,7 @@ exports.getUsers = async (req, res) => {
 };
 
 exports.getUserPage = async (req, res) => {
-  const user_id = req.params.user_id;
+  const user_number = req.params.user_number; // user_number로 수정
 
   try {
     // 사용자 정보와 주소 정보 조회
@@ -79,9 +79,9 @@ exports.getUserPage = async (req, res) => {
         a.user_detail_address
       FROM users u
       LEFT JOIN user_address a ON u.user_number = a.user_number
-      WHERE u.user_id = $1
+      WHERE u.user_number = $1  -- user_number로 수정
       `,
-      [user_id]
+      [user_number] // user_number로 수정
     );
 
     // 사용자가 존재하지 않을 경우 처리
@@ -98,29 +98,14 @@ exports.getUserPage = async (req, res) => {
 };
 
 exports.getUserInbody = async (req, res) => {
-  const user_id = req.params.user_id;
+  const user_number = req.params.user_number; // user_number로만 조회
 
   try {
-    // 사용자 번호를 가져오는 쿼리
-    const userResult = await database.query(
-      "SELECT user_number FROM users WHERE user_id = $1",
-      [user_id]
-    );
-
-    // 사용자가 존재하지 않을 경우 처리
-    if (userResult.rows.length === 0) {
-      return res.status(404).json({ msg: "사용자를 찾을 수 없습니다." });
-    }
-
-    const user_number = userResult.rows[0].user_number;
-
-    // user_number를 사용하여 인바디 정보를 가져오는 쿼리
     const inbodyResult = await database.query(
-      "SELECT * FROM user_inbody WHERE user_number = $1", // user_number로 수정
+      "SELECT * FROM user_inbody WHERE user_number = $1",
       [user_number]
     );
 
-    // 사용자의 인바디 정보가 없을 경우 처리
     if (inbodyResult.rows.length === 0) {
       return res
         .status(404)

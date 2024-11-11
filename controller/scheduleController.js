@@ -1,25 +1,15 @@
 const database = require("../database/database");
 
+// PT 스케줄 등록
 exports.postPtSchedule = async (req, res) => {
-  const { pt_number } = req.params; // PT 스케줄 번호
-  const { class_date, class_time, class_address } = req.body;
+  const { pt_number, class_date, class_time, address } = req.body;
 
   const client = await database.connect();
 
   try {
     await client.query("BEGIN");
 
-    // 새로운 스케줄 등록
-    const result = await client.query(
-      `INSERT INTO schedule_records (class_date, time, address, pt_number) 
-       VALUES ($1, $2, $3, $4) 
-       RETURNING schedule_number`,
-      [class_date, class_time, class_address, pt_number]
-    );
-
-    const scheduleNumber = result.rows[0].schedule_number;
-
-    // pt_schedule에서 트레이너와 회원 정보 가져오기
+    // pt_number에 연결된 트레이너와 회원 정보 조회
     const ptScheduleResult = await client.query(
       `SELECT pt_schedule.trainer_number, pt_schedule.user_number, pt_cost_option.frequency
        FROM pt_schedule
@@ -33,6 +23,16 @@ exports.postPtSchedule = async (req, res) => {
     }
 
     const { trainer_number, user_number, frequency } = ptScheduleResult.rows[0];
+
+    // 새로운 스케줄 등록
+    const result = await client.query(
+      `INSERT INTO schedule_records (class_date, class_time, address, pt_number) 
+       VALUES ($1, $2, $3, $4) 
+       RETURNING schedule_number`,
+      [class_date, class_time, address, pt_number]
+    );
+
+    const scheduleNumber = result.rows[0].schedule_number;
 
     // 현재 해당 pt_number의 등록된 수업 횟수 가져오기
     const scheduleCountResult = await client.query(
@@ -206,21 +206,31 @@ exports.getScheduleRecords = async (req, res) => {
 
     const ptScheduleData = ptScheduleResult.rows[0];
 
-    // schedule_records 정보 가져오기
+    // schedule_records와 유저, 트레이너 정보 조인하여 가져오기
     const scheduleRecordsResult = await database.query(
       `SELECT 
           sr.schedule_number,
           sr.class_date,
-          sr.time,
+          sr.class_time,
           sr.address,
           sr.status,
-          sr.created_at
+          sr.created_at,
+          u.name AS user_name,
+          u.user_number AS user_number,
+          t.name AS trainer_name,
+          t.trainer_number AS trainer_number
        FROM 
           schedule_records sr
+       JOIN 
+          pt_schedule ps ON sr.pt_number = ps.pt_number
+       LEFT JOIN 
+          users u ON ps.user_number = u.user_number
+       LEFT JOIN 
+          trainers t ON ps.trainer_number = t.trainer_number
        WHERE 
           sr.pt_number = $1
        ORDER BY 
-          sr.class_date, sr.time`,
+          sr.class_date, sr.class_time`,
       [pt_number]
     );
 

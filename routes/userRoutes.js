@@ -16,16 +16,16 @@ const {
 } = require("../controller/patchInfoUser");
 
 // 인바디 정보 저장
-router.post("/inbody/:user_id", postUserInbody);
+router.post("/inbody/:user_number", postUserInbody);
 
 // 모든 사용자 조회
 router.get("/users", getUsers);
 
 // 특정 사용자 페이지 정보 조회
-router.get("/page/:user_id", getUserPage);
+router.get("/page/:user_number", getUserPage);
 
 // 특정 사용자의 인바디 정보 조회
-router.get("/inbody/:user_id", getUserInbody);
+router.get("/inbody/:user_number", getUserInbody);
 
 // 사용자 소프트 삭제
 router.delete("/:user_number", deleteUser);
