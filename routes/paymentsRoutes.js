@@ -14,6 +14,6 @@ router.post("/pt-payments", postPtPayment);
 router.post("/pt-payments/:payment_number/completed", ptPaymentCompleted);
 
 // PT 결제정보 가져오기
-router.get("/pt-payments/:pt_number", getPtSchedule);
+router.get("/pt-schedules", getPtSchedule);
 
 module.exports = router;
