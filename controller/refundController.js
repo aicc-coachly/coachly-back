@@ -27,6 +27,10 @@ exports.createRefund = async (req, res) => {
       'INSERT INTO user_refund_reason (refund_reason, refund_number) VALUES ($1, $2)',
       [refund_reason, refund_number]
     );
+    await database.query(
+      "UPDATE pt_schedule SET status = 'refund' WHERE refund_number = $1",
+      [refund_number]
+    );
 
     // 트랜잭션 커밋
     await database.query('COMMIT');
