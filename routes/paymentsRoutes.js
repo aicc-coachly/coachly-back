@@ -1,4 +1,4 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
 
 const {
@@ -8,7 +8,7 @@ const {
 } = require("../controller/paymentController");
 
 // PT 결제 생성
-router.post("/pt-payments", postPtPayment);
+router.post('/pt-payments', postPtPayment);
 
 // PT 결제 완료 처리
 router.post("/pt-payments/:payment_number/completed", ptPaymentCompleted);
