@@ -66,26 +66,26 @@ module.exports = {
     return result.rows;
   },
 
-  // 메시지 읽음 상태 업데이트
-  markMessageAsRead: async (message_number) => {
-    const query = "UPDATE chat_message SET status = 'read' WHERE message_number = $1 RETURNING *";
-    const result = await pool.query(query, [message_number]);
-    return result.rows[0];
-  },
+  // // 메시지 읽음 상태 업데이트
+  // markMessageAsRead: async (message_number) => {
+  //   const query = "UPDATE chat_message SET status = 'read' WHERE message_number = $1 RETURNING *";
+  //   const result = await pool.query(query, [message_number]);
+  //   return result.rows[0];
+  // },
 
-  // 메시지 삭제 (soft delete)
-  deleteMessage: async (message_number) => {
-    const query = "UPDATE chat_message SET status = 'deleted' WHERE message_number = $1 RETURNING *";
-    const result = await pool.query(query, [message_number]);
-    return result.rows[0];
-  },
+  // // 메시지 삭제 (soft delete)
+  // deleteMessage: async (message_number) => {
+  //   const query = "UPDATE chat_message SET status = 'deleted' WHERE message_number = $1 RETURNING *";
+  //   const result = await pool.query(query, [message_number]);
+  //   return result.rows[0];
+  // },
 
-  // 채팅방 비활성화
-  deactivateChatRoom: async (room_id) => {
-    const query = "UPDATE chat_room SET status = 'deleted', delete_at = CURRENT_TIMESTAMP WHERE room_id = $1 RETURNING *";
-    const result = await pool.query(query, [room_id]);
-    return result.rows[0];
-  },
+  // // 채팅방 비활성화
+  // deactivateChatRoom: async (room_id) => {
+  //   const query = "UPDATE chat_room SET status = 'deleted', delete_at = CURRENT_TIMESTAMP WHERE room_id = $1 RETURNING *";
+  //   const result = await pool.query(query, [room_id]);
+  //   return result.rows[0];
+  // },
 
   // 채팅방 유형 확인
   getChatRoomType: async (room_id) => {

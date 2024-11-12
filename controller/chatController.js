@@ -11,35 +11,6 @@ exports.initializeIo = (socketIo) => {
   io = socketIo;
 };
 
-// AI 채팅 요청 함수
-exports.AiChatRequest = (data) => {
-  const { question, user_id } = data;
-  const execPython = path.join(__dirname, "../", "aichat.py");
-  const pythonPath = path.join("/Users/jeongminseog/conda/miniconda3/envs/recom_env/bin/python");
-
-  const net = spawn(pythonPath, [execPython, user_id, question]);
-  let output = "";
-
-  return new Promise((resolve, reject) => {
-    net.stdout.on("data", (data) => {
-      output += data.toString();
-    });
-
-    net.on("close", (code) => {
-      if (code === 0) {
-        resolve({ answer: output });
-      } else {
-        reject(new Error("Something went wrong"));
-      }
-    });
-
-    net.stderr.on("data", (data) => {
-      console.error(`stderr: ${data}`);
-    });
-  });
-};
-
-
 
 // 채팅방 생성
 exports.createChatRoom = async (req, res) => {
@@ -109,49 +80,6 @@ exports.getChatRoom = async (userNumber, trainerNumber) => {
 };
 
 
-// 메시지 읽음 상태 업데이트
-exports.readMessage = async (req, res) => {
-  const { message_number } = req.params;
-  try {
-    const result = await database.query("UPDATE chat_message SET status = 'read' WHERE message_number = $1 RETURNING *", [message_number]);
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Message not found" });
-    }
-    res.status(200).json({ message: "Message marked as read", updatedMessage: result.rows[0] });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
-// 메시지 삭제
-exports.deleteMessage = async (req, res) => {
-  const { message_number } = req.params;
-  try {
-    const result = await database.query("UPDATE chat_message SET status = 'deleted' WHERE message_number = $1 RETURNING *", [message_number]);
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Message not found" });
-    }
-    res.status(200).json({ message: "Message soft deleted successfully", deletedMessage: result.rows[0] });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
-// 채팅방 비활성화
-exports.deleteChatRoom = async (req, res) => {
-  const { room_id } = req.params;
-  try {
-    const result = await database.query("UPDATE chat_room SET status = 'deleted', delete_at = CURRENT_TIMESTAMP WHERE room_id = $1 RETURNING *", [room_id]);
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Chat room not found" });
-    }
-    await database.query("UPDATE chat_message SET status = 'deleted' WHERE room_id = $1", [room_id]);
-    res.status(200).json({ message: "Chat room and its messages soft deleted successfully", chatRoom: result.rows[0] });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
 // 메시지 목록 조회
 exports.getMessages = async (req, res) => {
   const { room_id } = req.params;
@@ -208,3 +136,79 @@ exports.leaveChatRoom = async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message })
   }}
+
+
+
+
+
+// // AI 채팅 요청 함수
+// exports.AiChatRequest = (data) => {
+//   const { question, user_id } = data;
+//   const execPython = path.join(__dirname, "../", "aichat.py");
+//   const pythonPath = path.join("/Users/jeongminseog/conda/miniconda3/envs/recom_env/bin/python");
+
+//   const net = spawn(pythonPath, [execPython, user_id, question]);
+//   let output = "";
+
+//   return new Promise((resolve, reject) => {
+//     net.stdout.on("data", (data) => {
+//       output += data.toString();
+//     });
+
+//     net.on("close", (code) => {
+//       if (code === 0) {
+//         resolve({ answer: output });
+//       } else {
+//         reject(new Error("Something went wrong"));
+//       }
+//     });
+
+//     net.stderr.on("data", (data) => {
+//       console.error(`stderr: ${data}`);
+//     });
+//   });
+// };
+
+
+// // 메시지 읽음 상태 업데이트
+// exports.readMessage = async (req, res) => {
+//   const { message_number } = req.params;
+//   try {
+//     const result = await database.query("UPDATE chat_message SET status = 'read' WHERE message_number = $1 RETURNING *", [message_number]);
+//     if (result.rows.length === 0) {
+//       return res.status(404).json({ error: "Message not found" });
+//     }
+//     res.status(200).json({ message: "Message marked as read", updatedMessage: result.rows[0] });
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// };
+
+// // 메시지 삭제
+// exports.deleteMessage = async (req, res) => {
+//   const { message_number } = req.params;
+//   try {
+//     const result = await database.query("UPDATE chat_message SET status = 'deleted' WHERE message_number = $1 RETURNING *", [message_number]);
+//     if (result.rows.length === 0) {
+//       return res.status(404).json({ error: "Message not found" });
+//     }
+//     res.status(200).json({ message: "Message soft deleted successfully", deletedMessage: result.rows[0] });
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// };
+
+// // 채팅방 비활성화
+// exports.deleteChatRoom = async (req, res) => {
+//   const { room_id } = req.params;
+//   try {
+//     const result = await database.query("UPDATE chat_room SET status = 'deleted', delete_at = CURRENT_TIMESTAMP WHERE room_id = $1 RETURNING *", [room_id]);
+//     if (result.rows.length === 0) {
+//       return res.status(404).json({ error: "Chat room not found" });
+//     }
+//     await database.query("UPDATE chat_message SET status = 'deleted' WHERE room_id = $1", [room_id]);
+//     res.status(200).json({ message: "Chat room and its messages soft deleted successfully", chatRoom: result.rows[0] });
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// };
