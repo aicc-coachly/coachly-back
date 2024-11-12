@@ -48,11 +48,22 @@ exports.createChatRoom = async (req, res) => {
   }
 
   try {
-    const query = "INSERT INTO chat_room (user_number, trainer_number) VALUES ($1, $2) RETURNING *";
+    // 1. 기존 채팅방이 있는지 조회
+    const checkQuery = "SELECT * FROM chat_room WHERE user_number = $1 AND trainer_number = $2";
+    const checkResult = await database.query(checkQuery, [user_number, trainer_number]);
+
+    if (checkResult.rows.length > 0) {
+      // 2. 기존 채팅방이 있을 경우 해당 채팅방 정보를 반환
+      return res.status(200).json(checkResult.rows[0]);
+    }
+
+    // 3. 기존 채팅방이 없을 경우 새 채팅방 생성
+    const insertQuery = "INSERT INTO chat_room (user_number, trainer_number) VALUES ($1, $2) RETURNING *";
     const values = [user_number, trainer_number];
-    const result = await database.query(query, values);
+    const result = await database.query(insertQuery, values);
     const roomId = result.rows[0].room_id;
 
+    // 4. 새 채팅방에 대한 초기 시스템 메시지 전송
     const systemMessage = {
       roomId,
       content: "트레이너와의 채팅방입니다. 질문을 해보세요!",
@@ -67,6 +78,7 @@ exports.createChatRoom = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
 
 // 채팅방 리스트 조회
 exports.getChatRooms = async (req, res) => {
