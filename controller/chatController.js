@@ -12,29 +12,55 @@ exports.initializeIo = (socketIo) => {
 };
 
 
-// 채팅방 생성
+// // AI 채팅방 생성
+// exports.createAIChatRoom = async (req, res) => {
+//   const { user_number } = req.body;
+//   if (!user_number) {
+//     return res.status(400).json({ error: "user_number가 필요합니다." });
+//   }
+
+//   try {
+//     const query = "INSERT INTO chat_room (user_number) VALUES ($1) RETURNING *";
+//     const values = [user_number];
+//     const result = await database.query(query, values);
+//     const roomId = result.rows[0].room_id;
+
+//     const aiMessage = {
+//       roomId,
+//       content: "안녕하세요! AI와의 채팅방입니다. 궁금한 것을 물어보세요!",
+//       senderName: "AI 시스템",
+//       timestamp: new Date(),
+//     };
+
+//     io.to(roomId).emit("messageReceived", aiMessage);
+//     res.status(201).json(result.rows[0]);
+//   } catch (error) {
+//     console.error("Error creating AI chat room:", error);
+//     res.status(500).json({ error: error.message });
+//   }
+// };
+
+// 일반 채팅방 생성
 exports.createChatRoom = async (req, res) => {
   const { user_number, trainer_number } = req.body;
-  try {
-    const isAIChat = !trainer_number;
-    const query = isAIChat
-      ? "INSERT INTO chat_room (user_number) VALUES ($1) RETURNING *"
-      : "INSERT INTO chat_room (user_number, trainer_number) VALUES ($1, $2) RETURNING *";
+  if (!user_number || !trainer_number) {
+    return res.status(400).json({ error: "user_number와 trainer_number가 필요합니다." });
+  }
 
-    const values = isAIChat ? [user_number] : [user_number, trainer_number];
+  try {
+    const query = "INSERT INTO chat_room (user_number, trainer_number) VALUES ($1, $2) RETURNING *";
+    const values = [user_number, trainer_number];
     const result = await database.query(query, values);
     const roomId = result.rows[0].room_id;
 
-    const fixedMessage = {
+    const systemMessage = {
       roomId,
-      content: isAIChat
-        ? "안녕하세요! AI와의 채팅방입니다. 궁금한 것을 물어보세요!"
-        : "트레이너와의 채팅방입니다. 질문을 해보세요!",
-      senderName: isAIChat ? "AI 시스템" : "시스템",
+      content: "트레이너와의 채팅방입니다. 질문을 해보세요!",
+      senderName: "시스템",
       timestamp: new Date(),
     };
 
-    io.to(roomId).emit("messageReceived", fixedMessage); // io 사용
+    io.to(roomId).emit("messageReceived", systemMessage);
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error("Error creating chat room:", error);

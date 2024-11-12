@@ -7,6 +7,7 @@ const {
   getChatRooms,
   getChatRoom,
   leaveChatRoom,
+  // createAIChatRoom,
   // AiChatRequest,
   // readMessage,
   // deleteMessage,
@@ -52,6 +53,9 @@ router.get("/chat-room", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// ai 채팅방 생성
+// router.post("/chat-room/ai", createAIChatRoom);
 
 // 채팅방 생성
 router.post("/chat-room", async (req, res) => {
