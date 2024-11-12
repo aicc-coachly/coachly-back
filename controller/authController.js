@@ -226,7 +226,13 @@ exports.userLogin = async (req, res) => {
       { expiresIn: "1h" }
     );
 
-    return res.status(200).json({ message: "로그인 성공", user_id, token });
+    return res.status(200).json({
+      message: "로그인 성공",
+      user_number: user.user_number,
+      user_id,
+      token,
+      user_name: user.name,
+    });
   } catch (error) {
     console.error("데이터베이스 쿼리 오류:", error);
     return res.status(500).json({ error: "서버 오류가 발생했습니다." });

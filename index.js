@@ -34,7 +34,9 @@ io.on("connection", (socket) => {
     io.to(message.roomId).emit("messageReceived", message);
   });
 
+
   socket.on("leaveRoom", (roomId) => {
+
     socket.leave(roomId);
     console.log(`User left room: ${roomId}`);
   });

@@ -2,7 +2,7 @@ CREATE TABLE chat_room (
     room_id SERIAL PRIMARY KEY NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     delete_at TIMESTAMP NULL,
-    is_active BOOLEAN NOT NULL DEFAULT timestampRUE,
+    status BOOLEAN NOT NULL DEFAULT TRUE,
     user_number INT REFERENCES users(user_number),
     trainer_number INT REFERENCES trainers(trainer_number)
 );
