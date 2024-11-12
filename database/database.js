@@ -10,7 +10,37 @@ const pool = new Pool({
   database: process.env.DB_NAME,
 });
 
+// 채팅방 리스트 조회
+const getChatRoomsByUserOrTrainer = async (userNumber, trainerNumber) => {
+  let query, values;
+  if (userNumber) {
+    query = "SELECT * FROM chat_room WHERE user_number = $1 AND status = true"; // status가 true인 경우만 조회
+    values = [userNumber];
+  } else if (trainerNumber) {
+    query = "SELECT * FROM chat_room WHERE trainer_number = $1 AND status = true"; // status가 true인 경우만 조회
+    values = [trainerNumber];
+  } else {
+    throw new Error("user_number 또는 trainer_number 중 하나는 제공되어야 합니다.");
+  }
+  const result = await pool.query(query, values);
+  return result.rows;
+};
+
+// 특정 채팅방 조회
+const getChatRoomByUserAndTrainer = async (userNumber, trainerNumber) => {
+  const query = `
+    SELECT * FROM chat_room
+    WHERE user_number = $1 AND trainer_number = $2 AND status = true
+  `;
+  const result = await pool.query(query, [userNumber, trainerNumber]);
+  return result.rows[0];
+};
+// 모든 함수를 포함한 module.exports 객체 생성
 module.exports = {
+  pool, // pool도 내보내기
+  getChatRoomsByUserOrTrainer,
+  getChatRoomByUserAndTrainer,
+
   // 채팅방 생성
   createChatRoom: async (user_number, trainer_number = null, type) => {
     const query = trainer_number
@@ -64,6 +94,3 @@ module.exports = {
     return result.rows[0]?.type;
   }
 };
-
-// 주석추가
-module.exports = pool; // {} 로 감쌀 경우 pool 변수를 적어서 사용해야 한다.

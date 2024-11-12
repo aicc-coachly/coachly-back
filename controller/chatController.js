@@ -4,6 +4,7 @@ const database = require("../database/database");
 
 let io; // io 객체를 저장할 변수
 
+
 // io 객체 초기화 함수
 exports.initializeIo = (socketIo) => {
   io = socketIo;
@@ -37,6 +38,8 @@ exports.AiChatRequest = (data) => {
   });
 };
 
+
+// 채팅방 생성
 exports.createChatRoom = async (req, res) => {
   const { user_number, trainer_number } = req.body;
   try {
@@ -65,6 +68,45 @@ exports.createChatRoom = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+// 채팅방 리스트 조회
+exports.getChatRooms = async (req, res) => {
+  const userNumber = req.query.userNumber || null;
+  const trainerNumber = req.query.trainerNumber || null;
+
+  // 쿼리 파라미터 출력
+  console.log("userNumber:", userNumber);
+  console.log("trainerNumber:", trainerNumber);
+
+  if (!userNumber && !trainerNumber) {
+    return res.status(400).json({ error: "user_number 또는 trainer_number 중 하나는 제공되어야 합니다." });
+  }
+
+  try {
+    const chatRooms = await database.getChatRoomsByUserOrTrainer(userNumber, trainerNumber);
+    res.status(200).json(chatRooms);
+  } catch (error) {
+    console.error("Error fetching chat rooms:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// 특정 채팅방 조회
+exports.getChatRoom = async (userNumber, trainerNumber) => {
+  if (!userNumber || !trainerNumber) {
+    throw new Error("user_number와 trainer_number 모두 제공되어야 합니다.");
+  }
+
+  try {
+    const chatRoom = await database.getChatRoomByUserAndTrainer(userNumber, trainerNumber);
+    return chatRoom;
+  } catch (error) {
+    console.error("Error fetching specific chat room:", error);
+    throw new Error(error.message);
+  }
+};
+
+
 // 메시지 읽음 상태 업데이트
 exports.readMessage = async (req, res) => {
   const { message_number } = req.params;
@@ -111,10 +153,12 @@ exports.deleteChatRoom = async (req, res) => {
 // 메시지 목록 조회
 exports.getMessages = async (req, res) => {
   const { room_id } = req.params;
+
   try {
-    const result = await database.query("SELECT * FROM chat_message WHERE room_id = $1 ORDER BY timestamp ASC", [room_id]);
+    const result = await database.pool.query("SELECT * FROM chat_message WHERE room_id = $1 ORDER BY timestamp ASC", [room_id]);
     res.status(200).json(result.rows);
   } catch (error) {
+    console.error("Error fetching messages:", error);
     res.status(500).json({ error: error.message });
   }
 };
