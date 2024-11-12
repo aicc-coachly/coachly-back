@@ -14,7 +14,6 @@ const {
   // deleteChatRoom,
 } = require("../controller/chatController");
 
-
 // 채팅방 리스트 조회
 router.get("/chat-rooms", async (req, res) => {
   const userNumber = req.query.userNumber || null;
@@ -25,11 +24,10 @@ router.get("/chat-rooms", async (req, res) => {
   }
 
   try {
-    // getChatRooms 함수 호출 방식 수정
-    const response = await getChatRooms(req, res); // req와 res를 직접 전달
-    res.status(200).json(response);
+    const response = await getChatRooms(req, res);
+    if (!res.headersSent) res.status(200).json(response);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    if (!res.headersSent) res.status(500).json({ error: error.message });
   }
 });
 
@@ -43,14 +41,14 @@ router.get("/chat-room", async (req, res) => {
   }
 
   try {
-    const chatRoom = await getChatRoom(userNumber, trainerNumber); // 인수로 전달
-    if (chatRoom) {
+    const chatRoom = await getChatRoom(userNumber, trainerNumber);
+    if (chatRoom && !res.headersSent) {
       res.status(200).json(chatRoom);
-    } else {
+    } else if (!res.headersSent) {
       res.status(404).json({ error: "해당 조건에 맞는 채팅방이 없습니다." });
     }
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    if (!res.headersSent) res.status(500).json({ error: error.message });
   }
 });
 
@@ -60,30 +58,30 @@ router.get("/chat-room", async (req, res) => {
 // 채팅방 생성
 router.post("/chat-room", async (req, res) => {
   try {
-    const response = await createChatRoom(req, res); // 비동기 함수 호출
-    res.status(201).json(response); // 정상적으로 응답 반환
+    const response = await createChatRoom(req, res);
+    if (!res.headersSent) res.status(201).json(response);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    if (!res.headersSent) res.status(500).json({ error: error.message });
   }
 });
 
 // 메시지 전송
 router.post("/chat-room/:room_id/messages", async (req, res) => {
   try {
-    const response = await sendMessage(req, res); // 비동기 함수 호출
-    res.status(201).json(response); // 응답 반환
+    const response = await sendMessage(req, res);
+    if (!res.headersSent) res.status(201).json(response);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    if (!res.headersSent) res.status(500).json({ error: error.message });
   }
 });
 
 // 메시지 조회 
 router.get("/chat-room/:room_id/messages", async (req, res) => {
   try {
-    const response = await getMessages(req, res); // 비동기 함수 호출
-    res.status(200).json(response); // 응답 반환
+    const response = await getMessages(req, res);
+    if (!res.headersSent) res.status(200).json(response);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    if (!res.headersSent) res.status(500).json({ error: error.message });
   }
 });
 
@@ -91,56 +89,10 @@ router.get("/chat-room/:room_id/messages", async (req, res) => {
 router.post("/chat-room/:room_id/leave", async (req, res) => {
   try {
     const response = await leaveChatRoom(req, res);
-    res.status(200).json(response);
+    if (!res.headersSent) res.status(200).json(response);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    if (!res.headersSent) res.status(500).json({ error: error.message });
   }
 });
 
 module.exports = router;
-
-
-
-
-
-
-
-// // AI 채팅 요청 (비동기 처리)
-// router.post("/aichat", async (req, res) => {
-//   try {
-//     const aiResponse = await AiChatRequest(req.body); // 비동기 함수 호출
-//     res.status(200).json(aiResponse);
-//   } catch (error) {
-//     res.status(500).json({ error: error.message });
-//   }
-// });
-
-// // 메시지 읽음 처리
-// router.patch("/messages/:message_number/read", async (req, res) => {
-//   try {
-//     const response = await readMessage(req, res); // 비동기 함수 호출
-//     res.status(200).json(response); // 응답 반환
-//   } catch (error) {
-//     res.status(500).json({ error: error.message });
-//   }
-// });
-
-// // 메시지 삭제
-// router.delete("/messages/:message_number", async (req, res) => {
-//   try {
-//     const response = await deleteMessage(req, res); // 비동기 함수 호출
-//     res.status(200).json(response); // 응답 반환
-//   } catch (error) {
-//     res.status(500).json({ error: error.message });
-//   }
-// });
-
-// // 채팅방 비활성화
-// router.delete("/chat-room/:room_id", async (req, res) => {
-//   try {
-//     const response = await deleteChatRoom(req, res); // 비동기 함수 호출
-//     res.status(200).json(response); // 응답 반환
-//   } catch (error) {
-//     res.status(500).json({ error: error.message });
-//   }
-// });

@@ -47,15 +47,16 @@ exports.createChatRoom = async (req, res) => {
     return res.status(400).json({ error: "user_number와 trainer_number가 필요합니다." });
   }
 
-  try {
     // 1. 기존 채팅방이 있는지 조회
-    const checkQuery = "SELECT * FROM chat_room WHERE user_number = $1 AND trainer_number = $2";
-    const checkResult = await database.query(checkQuery, [user_number, trainer_number]);
-
-    if (checkResult.rows.length > 0) {
-      // 2. 기존 채팅방이 있을 경우 해당 채팅방 정보를 반환
-      return res.status(200).json(checkResult.rows[0]);
-    }
+    try {
+        const checkQuery = "SELECT * FROM chat_room WHERE user_number = $1 AND trainer_number = $2";
+        const checkResult = await database.query(checkQuery, [user_number, trainer_number]);
+    // 2. 기존 채팅방이 있을 경우 해당 채팅방 정보를 반환
+      if (checkResult.rows.length > 0) {
+        if (!res.headersSent) {
+          return res.status(200).json(checkResult.rows[0]);
+        }
+      }
 
     // 3. 기존 채팅방이 없을 경우 새 채팅방 생성
     const insertQuery = "INSERT INTO chat_room (user_number, trainer_number) VALUES ($1, $2) RETURNING *";
@@ -118,16 +119,25 @@ exports.getChatRoom = async (userNumber, trainerNumber) => {
 };
 
 
-// 메시지 목록 조회
 exports.getMessages = async (req, res) => {
-  const { room_id } = req.params;
-
   try {
-    const result = await database.pool.query("SELECT * FROM chat_message WHERE room_id = $1 ORDER BY timestamp ASC", [room_id]);
+    // database 연결 확인
+    if (!database || !database.query) {
+      throw new Error("Database connection is not defined or query method is missing");
+    }
+    
+    const roomId = req.params.roomId;
+    const query = "SELECT * FROM messages WHERE room_id = $1";
+    const values = [roomId];
+
+    const result = await database.query(query, values); 
     res.status(200).json(result.rows);
   } catch (error) {
     console.error("Error fetching messages:", error);
-    res.status(500).json({ error: error.message });
+    // 응답이 중복되지 않도록 설정
+    if (!res.headersSent) {
+      res.status(500).json({ error: error.message });
+    }
   }
 };
 

@@ -3,7 +3,6 @@ const cors = require("cors");
 const PORT = 8000;
 const path = require("path");
 const socketIo = require("socket.io");
-const bodyParser = require("body-parser");
 require("dotenv").config();
 
 const app = express();
@@ -22,37 +21,8 @@ const io = socketIo(server, {
 const chatController = require("./controller/chatController");
 chatController.initializeIo(io);
 
-io.on("connection", (socket) => {
-  console.log("A user connected:", socket.id);
-
-  socket.on("joinRoom", (roomId) => {
-    socket.join(roomId);
-    console.log(`User joined room: ${roomId}`);
-  });
-
-  socket.on("sendMessage", (message) => {
-    io.to(message.roomId).emit("messageReceived", message);
-  });
-
-
-  socket.on("leaveRoom", (roomId) => {
-
-    socket.leave(roomId);
-    console.log(`User left room: ${roomId}`);
-  });
-
-  socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
-  });
-});
-
-app.get("/", (req, res) => {
-  res.send("server");
-});
-
-app.use(cors());
+app.use(cors()); // CORS 설정이 모든 경로에 먼저 적용되도록 위치 변경
 app.use(express.json());
-app.use(bodyParser.json());
 
 app.use(express.static(path.join(__dirname, "public")));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
@@ -65,3 +35,29 @@ app.use(require("./routes/authTokenRoutes"));
 app.use(require("./routes/refundRoutes"));
 app.use(require("./routes/scheduleRoutes"));
 app.use(require("./routes/paymentsRoutes"));
+
+io.on("connection", (socket) => {
+  console.log("A user connected:", socket.id);
+
+  socket.on("joinRoom", (roomId) => {
+    socket.join(roomId);
+    console.log(`User joined room: ${roomId}`);
+  });
+
+  socket.on("sendMessage", (message) => {
+    io.to(message.roomId).emit("messageReceived", message);
+  });
+
+  socket.on("leaveRoom", (roomId) => {
+    socket.leave(roomId);
+    console.log(`User left room: ${roomId}`);
+  });
+
+  socket.on("disconnect", () => {
+    console.log("User disconnected:", socket.id);
+  });
+});
+
+app.get("/", (req, res) => {
+  res.send("server");
+});
