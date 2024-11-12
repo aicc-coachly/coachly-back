@@ -15,7 +15,6 @@ exports.trainerSignup = async (req, res) => {
     phone,
     gender,
     resume,
-    trainer_zipcode,
     trainer_address,
     trainer_detail_address,
     account,
@@ -63,8 +62,8 @@ exports.trainerSignup = async (req, res) => {
     );
 
     await client.query(
-      "INSERT INTO gym_address (trainer_number, trainer_zipcode, trainer_address, trainer_detail_address) VALUES ($1, $2, $3, $4)",
-      [trainer_number, trainer_zipcode, trainer_address, trainer_detail_address]
+      "INSERT INTO gym_address (trainer_number, trainer_address, trainer_detail_address) VALUES ($1, $2, $3)",
+      [trainer_number, trainer_address, trainer_detail_address]
     );
 
     // 가격 정보 삽입
@@ -155,7 +154,6 @@ exports.userSignup = async (req, res) => {
     birth,
     phone,
     gender,
-    user_zipcode,
     user_address,
     user_detail_address,
   } = req.body;
@@ -179,8 +177,8 @@ exports.userSignup = async (req, res) => {
 
     // 사용자 주소 정보 삽입
     await client.query(
-      "INSERT INTO user_address (user_number, user_zipcode, user_address, user_detail_address) VALUES ($1, $2, $3, $4)",
-      [user_number, user_zipcode, user_address, user_detail_address]
+      "INSERT INTO user_address (user_number, user_address, user_detail_address) VALUES ($1, $2, $3)",
+      [user_number, user_address, user_detail_address]
     );
 
     await client.query("COMMIT");

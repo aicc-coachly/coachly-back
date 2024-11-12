@@ -74,16 +74,36 @@ exports.completePtSchedule = async (req, res) => {
   const { schedule_number } = req.params;
 
   try {
-    // 1. PT 스케줄 상태를 'completed'로 변경
+    // 1. PT 스케줄 레코드 상태를 'completed'로 변경
     await database.query(
       "UPDATE schedule_records SET status = 'completed' WHERE schedule_number = $1",
       [schedule_number]
     );
 
-    // 2. 트레이너의 계좌 정보를 조회
-    const trainerInfoResult = await database.query(
-      "SELECT p.trainer_number, b.trainer_account_number FROM pt_schedule p JOIN trainer_bank_account b ON p.trainer_number = b.trainer_number WHERE p.pt_number = (SELECT pt_number FROM schedule_records WHERE schedule_number = $1)",
+    // 2. PT 스케줄 테이블에서 관련 PT 번호 가져오기
+    const ptNumberResult = await database.query(
+      "SELECT pt_number FROM schedule_records WHERE schedule_number = $1",
       [schedule_number]
+    );
+
+    if (ptNumberResult.rows.length === 0) {
+      return res
+        .status(404)
+        .json({ error: "PT 스케줄 정보를 찾을 수 없습니다." });
+    }
+
+    const { pt_number } = ptNumberResult.rows[0];
+
+    // 3. PT 스케줄 테이블 상태를 'completed'로 변경
+    await database.query(
+      "UPDATE pt_schedule SET status = 'completed' WHERE pt_number = $1",
+      [pt_number]
+    );
+
+    // 4. 트레이너의 계좌 정보를 조회
+    const trainerInfoResult = await database.query(
+      "SELECT p.trainer_number, b.trainer_account_number FROM pt_schedule p JOIN trainer_bank_account b ON p.trainer_number = b.trainer_number WHERE p.pt_number = $1",
+      [pt_number]
     );
 
     if (trainerInfoResult.rows.length === 0) {
@@ -94,7 +114,7 @@ exports.completePtSchedule = async (req, res) => {
 
     const { trainer_account_number } = trainerInfoResult.rows[0];
 
-    // 3. 페이 체크 테이블에 기록 추가
+    // 5. 페이 체크 테이블에 기록 추가
     await database.query(
       "INSERT INTO paycheck (schedule_number, trainer_account_number) VALUES ($1, $2)",
       [schedule_number, trainer_account_number]
