@@ -145,7 +145,7 @@ exports.updateRefund = async (req, res) => {
 
 // 환불 요청 삭제 (상태 변경)
 exports.deleteRefund = async (req, res) => {
-  const { refund_number } = req.params;
+  const refund_number = Number(req.params.refund_number);
 
   try {
     // 트랜잭션 시작
@@ -153,7 +153,7 @@ exports.deleteRefund = async (req, res) => {
 
     // user_refund 테이블 상태 업데이트
     const result = await database.query(
-      "UPDATE user_refund SET status = 'deleted' WHERE refund_number = $1",
+      "UPDATE user_refund SET status = 'delete' WHERE refund_number = $1",
       [refund_number]
     );
 

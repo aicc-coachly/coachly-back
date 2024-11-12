@@ -1,4 +1,4 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
 const {
   createRefund,
@@ -6,21 +6,23 @@ const {
   getAllRefund,
   updateRefund,
   deleteRefund,
-} = require("../controller/refundController");
+} = require('../controller/refundController');
 
 // 환불 사유 생성
-router.post("/refund-reasons", createRefund);
+router.post('/refund-reasons', createRefund);
 
 // 모든 환불 사유 조회
-router.get("/refund-reasons", getAllRefund);
+router.get('/refund-reasons', getAllRefund);
 
 // 특정 환불 사유 조회
-router.get("/refund-reasons/:refund_number", getRefund);
+router.get('/refund-reasons/:refund_number', getRefund);
 
 // 환불 사유 수정
-router.patch("/refund-reasons/:refund_number", updateRefund);
+router.patch('/refund-reasons/:refund_number', updateRefund);
 
 // 환불 사유 상태 변경 (삭제)
-router.delete("/refund-reasons/:refund_number", deleteRefund);
+// 환불 사유 삭제 (DELETE와 POST 모두 허용)
+router.post('/refund-reasons/:refund_number', deleteRefund); // POST 요청도 허용
+router.delete('/refund-reasons/:refund_number', deleteRefund);
 
 module.exports = router;
