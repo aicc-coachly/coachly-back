@@ -20,7 +20,7 @@ CREATE TABLE schedule_records (
     class_date DATE NOT NULL,
     time TIME NOT NULL,
     address VARCHAR(50) NOT NULL,
-    status VARCHAR(10) NOT NULL CHECK (status IN ('registered', 'completed', 'canceled')) DEFAULT 'registered',
+    status VARCHAR(10) NOT NULL CHECK (status IN ('registered', 'completed', 'canceled', 'deleted')) DEFAULT 'registered',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NULL,
     delete_at TIMESTAMP NULL,

@@ -31,7 +31,7 @@ router.get("/inbody/:user_number", getUserInbody);
 router.delete("/:user_number", deleteUser);
 
 // 사용자 인바디 정보 소프트 삭제
-router.delete("/inbody/:user_number", deleteUserInbody);
+router.patch("/inbody/:user_inbody_number", deleteUserInbody);
 
 // 사용자 주소 소프트 삭제
 router.delete("/address/:user_number", deleteUserAddress);

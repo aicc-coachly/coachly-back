@@ -23,7 +23,7 @@ router.post("/paychecks/:paycheck_number/completed", completePaycheck);
 router.patch("/pt-schedules/:schedule_number", updatePtSchedule);
 
 // PT 일정 삭제
-router.delete("/pt-schedules/:schedule_number", deletePtSchedule);
+router.patch("/pt-schedules/:schedule_number/status", deletePtSchedule);
 
 // PT 일정 가져오기
 router.get("/pt-schedules/:pt_number", getScheduleRecords);
