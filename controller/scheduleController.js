@@ -82,7 +82,7 @@ exports.completePtSchedule = async (req, res) => {
 
     // 2. 트레이너의 계좌 정보를 조회
     const trainerInfoResult = await database.query(
-      "SELECT t.trainer_number, b.trainer_account_number FROM pt_schedule p JOIN trainer_bank_account b ON p.trainer_number = b.trainer_number WHERE p.pt_number = (SELECT pt_number FROM schedule_records WHERE schedule_number = $1)",
+      "SELECT p.trainer_number, b.trainer_account_number FROM pt_schedule p JOIN trainer_bank_account b ON p.trainer_number = b.trainer_number WHERE p.pt_number = (SELECT pt_number FROM schedule_records WHERE schedule_number = $1)",
       [schedule_number]
     );
 
@@ -126,13 +126,13 @@ exports.completePaycheck = async (req, res) => {
 
 exports.updatePtSchedule = async (req, res) => {
   const { schedule_number } = req.params;
-  const { class_date, class_time, class_address } = req.body;
+  const { class_date, class_time, address } = req.body;
 
   try {
     // PT 스케줄 업데이트
     const result = await database.query(
-      "UPDATE schedule_records SET class_date = $1, class_time = $2, class_address = $3 WHERE schedule_number = $4",
-      [class_date, class_time, class_address, schedule_number]
+      "UPDATE schedule_records SET class_date = $1, class_time = $2, address = $3, updated_at = NOW() WHERE schedule_number = $4",
+      [class_date, class_time, address, schedule_number]
     );
 
     if (result.rowCount === 0) {
@@ -150,13 +150,23 @@ exports.updatePtSchedule = async (req, res) => {
 
 exports.deletePtSchedule = async (req, res) => {
   const { schedule_number } = req.params;
+  const { status } = req.body;
+
+  console.log("Updating schedule with status:", status);
+
+  // 상태가 'deleted'일 경우 delete_at을 현재 시간으로 업데이트
+  const updateValues = [status];
+  let query = "UPDATE schedule_records SET status = $1";
+
+  if (status === "deleted") {
+    query += ", delete_at = CURRENT_TIMESTAMP"; // delete_at을 현재 시간으로 설정
+  }
+
+  query += " WHERE schedule_number = $2";
+  updateValues.push(schedule_number);
 
   try {
-    // PT 스케줄 상태를 'deleted'로 변경 (소프트 삭제)
-    const result = await database.query(
-      "UPDATE schedule_records SET status = 'deleted', delete_at = CURRENT_TIMESTAMP WHERE schedule_number = $1",
-      [schedule_number]
-    );
+    const result = await database.query(query, updateValues);
 
     if (result.rowCount === 0) {
       return res.status(404).json({ message: "Schedule not found" });
@@ -164,10 +174,10 @@ exports.deletePtSchedule = async (req, res) => {
 
     return res
       .status(200)
-      .json({ message: "PT Schedule deleted successfully" });
+      .json({ message: "PT Schedule status updated successfully" });
   } catch (error) {
-    console.error("Error deleting PT schedule:", error);
-    return res.status(500).json({ error: "Failed to delete PT schedule" });
+    console.error("Error updating PT schedule:", error);
+    return res.status(500).json({ error: "Failed to update PT schedule" });
   }
 };
 
@@ -213,7 +223,7 @@ exports.getScheduleRecords = async (req, res) => {
           sr.class_date,
           sr.class_time,
           sr.address,
-          sr.status,
+          sr.status,  -- status 추가
           sr.created_at,
           u.name AS user_name,
           u.user_number AS user_number,

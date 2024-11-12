@@ -159,12 +159,12 @@ exports.deleteUser = async (req, res) => {
 };
 
 exports.deleteUserInbody = async (req, res) => {
-  const { user_number } = req.params;
+  const { user_inbody_number } = req.params;
 
   try {
     const result = await database.query(
-      "UPDATE user_inbody SET status = FALSE, delete_at = CURRENT_TIMESTAMP WHERE user_number = $1 RETURNING *",
-      [user_number]
+      "UPDATE user_inbody SET status = FALSE, delete_at = CURRENT_TIMESTAMP WHERE user_inbody_number = $1 RETURNING *",
+      [user_inbody_number]
     );
 
     if (result.rows.length === 0) {

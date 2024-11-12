@@ -155,7 +155,7 @@ exports.ptPaymentCompleted = async (req, res) => {
 };
 
 exports.getPtSchedule = async (req, res) => {
-  const { user_number, trainer_number } = req.query; // 쿼리 파라미터로 받기
+  const { user_number, trainer_number } = req.query;
 
   if (!user_number && !trainer_number) {
     return res
@@ -166,25 +166,25 @@ exports.getPtSchedule = async (req, res) => {
   try {
     const result = await database.query(
       `SELECT 
-    ps.pt_number,
-    ps.created_at,
-    ps.status,
-    u.name AS user_name,
-    u.user_number,              -- user_number 추가
-    t.name AS trainer_name,
-    p.amount AS amount,
-    p.frequency AS frequency
-  FROM 
-    pt_schedule ps
-  LEFT JOIN 
-    users u ON ps.user_number = u.user_number
-  LEFT JOIN 
-    trainers t ON ps.trainer_number = t.trainer_number
-  LEFT JOIN 
-    pt_cost_option p ON ps.amount_number = p.amount_number
-  WHERE 
-    (ps.user_number = $1 OR ps.trainer_number = $2)`,
-      [user_number, trainer_number]
+        ps.pt_number,
+        ps.created_at,
+        ps.status,
+        u.name AS user_name,
+        u.user_number,
+        t.name AS trainer_name,
+        p.amount AS amount,
+        p.frequency AS frequency
+      FROM 
+        pt_schedule ps
+      LEFT JOIN 
+        users u ON ps.user_number = u.user_number
+      LEFT JOIN 
+        trainers t ON ps.trainer_number = t.trainer_number
+      LEFT JOIN 
+        pt_cost_option p ON ps.amount_number = p.amount_number
+      WHERE 
+        (ps.user_number = $1 OR ps.trainer_number = $2)`,
+      [user_number || null, trainer_number || null] // user_number나 trainer_number가 없으면 null로 처리
     );
 
     if (result.rows.length === 0) {
