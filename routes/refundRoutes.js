@@ -22,7 +22,7 @@ router.patch('/refund-reasons/:refund_number', updateRefund);
 
 // 환불 사유 상태 변경 (삭제)
 // 환불 사유 삭제 (DELETE와 POST 모두 허용)
-router.post('/refund-reasons/:refund_number', deleteRefund); // POST 요청도 허용
+// router.post('/refund-reasons/:refund_number', deleteRefund); // POST 요청도 허용
 router.delete('/refund-reasons/:refund_number', deleteRefund);
 
 module.exports = router;

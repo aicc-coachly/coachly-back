@@ -21,15 +21,16 @@ exports.createRefund = async (req, res) => {
     );
 
     const refund_number = refundResult.rows[0].refund_number;
-
+    console.log('환불번호 생성 확인 : ', refund_number);
+    console.log('환불 이유 생성 확인 : ', refund_reason);
     // user_refund_reason 테이블에 데이터 삽입
     await database.query(
       'INSERT INTO user_refund_reason (refund_reason, refund_number) VALUES ($1, $2)',
       [refund_reason, refund_number]
     );
     await database.query(
-      "UPDATE pt_schedule SET status = 'refund' WHERE refund_number = $1",
-      [refund_number]
+      "UPDATE pt_schedule SET status = 'refund' WHERE pt_number = $1",
+      [pt_number]
     );
 
     // 트랜잭션 커밋
