@@ -27,9 +27,9 @@ exports.getChatRooms = async (req, res) => {
     let query, values;
     if (userNumber) {
       query = `
-        SELECT cr.room_id, cr.user_number, cr.trainer_number, cr.status, t.trainer_name AS other_party_name
+        SELECT cr.room_id, cr.user_number, cr.trainer_number, cr.status, t.name AS other_party_name
         FROM chat_room cr
-        LEFT JOIN trainer t ON cr.trainer_number = t.trainer_number
+        LEFT JOIN trainers t ON cr.trainer_number = t.trainer_number
         WHERE cr.user_number = $1 AND cr.status = true
       `;
       values = [userNumber];
@@ -54,14 +54,37 @@ exports.getChatRooms = async (req, res) => {
 };
 
 // 특정 채팅방 조회
-exports.getChatRoom = async (userNumber, trainerNumber) => {
+exports.getChatRoom = async (roomId, userNumber = null, trainerNumber = null) => {
   const client = await pool.connect();
   try {
-    const query = `
-      SELECT * FROM chat_room
-      WHERE user_number = $1 AND trainer_number = $2 AND status = true
-    `;
-    const result = await client.query(query, [userNumber, trainerNumber]);
+    let query, values;
+
+    if (userNumber) {
+      // 유저가 채팅방에 있는 경우, 트레이너의 이름을 가져옴
+      query = `
+        SELECT cr.room_id, cr.user_number, cr.trainer_number, cr.status, t.name AS other_party_name
+        FROM chat_room cr
+        LEFT JOIN trainers t ON cr.trainer_number = t.trainer_number
+        WHERE cr.room_id = $1 AND cr.user_number = $2 AND cr.status = true
+      `;
+      values = [roomId, userNumber];
+    } else if (trainerNumber) {
+      // 트레이너가 채팅방에 있는 경우, 유저의 이름을 가져옴
+      query = `
+        SELECT cr.room_id, cr.user_number, cr.trainer_number, cr.status, u.name AS other_party_name
+        FROM chat_room cr
+        LEFT JOIN users u ON cr.user_number = u.user_number
+        WHERE cr.room_id = $1 AND cr.trainer_number = $2 AND cr.status = true
+      `;
+      values = [roomId, trainerNumber];
+    } else {
+      throw new Error("userNumber 또는 trainerNumber 중 하나는 제공되어야 합니다.");
+    }
+
+    console.log("Executing query:", query, "with values:", values);
+    const result = await client.query(query, values);
+    console.log("Query result:", result.rows);
+
     return result.rows[0];
   } catch (error) {
     console.error("Error fetching specific chat room:", error);
@@ -70,6 +93,7 @@ exports.getChatRoom = async (userNumber, trainerNumber) => {
     client.release();
   }
 };
+
 
 // 일반 채팅방 생성
 exports.createChatRoom = async (req, res) => {
@@ -110,12 +134,12 @@ exports.createChatRoom = async (req, res) => {
 
 // 메시지 목록 조회
 exports.getMessages = async (req, res) => {
-  const roomId = req.params.roomId;
-
+  const roomId = req.params.room_id;
   const client = await pool.connect();
   try {
     const query = "SELECT * FROM chat_message WHERE room_id = $1 ORDER BY timestamp ASC";
     const result = await client.query(query, [roomId]);
+    console.log("Query result:", result.rows); // 로깅하여 확인
     res.status(200).json(result.rows);
   } catch (error) {
     console.error("Error fetching messages:", error);
@@ -124,6 +148,7 @@ exports.getMessages = async (req, res) => {
     client.release();
   }
 };
+
 
 // 메시지 전송
 exports.sendMessage = (req, res) => {
