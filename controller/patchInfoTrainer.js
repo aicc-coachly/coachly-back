@@ -55,7 +55,7 @@ exports.updateTrainerInfo = async (req, res) => {
 
 exports.updateTrainerAddress = async (req, res) => {
   const { trainer_number } = req.params;
-  const { trainer_zipcode, trainer_address, trainer_detail_address } = req.body;
+  const { trainer_address, trainer_detail_address } = req.body;
 
   try {
     if (!(await isValidTrainerNumber(trainer_number))) {
@@ -64,18 +64,12 @@ exports.updateTrainerAddress = async (req, res) => {
 
     const updatedAddress = await updateDatabase(
       `UPDATE gym_address 
-       SET trainer_zipcode = COALESCE($1, trainer_zipcode),
-           trainer_address = COALESCE($2, trainer_address),
-           trainer_detail_address = COALESCE($3, trainer_detail_address),
+       SET trainer_address = COALESCE($1, trainer_address),
+           trainer_detail_address = COALESCE($2, trainer_detail_address),
            updated_at = CURRENT_TIMESTAMP
-       WHERE trainer_number = $4
+       WHERE trainer_number = $3
        RETURNING *`,
-      [
-        trainer_zipcode,
-        trainer_address,
-        trainer_detail_address,
-        trainer_number,
-      ],
+      [trainer_address, trainer_detail_address, trainer_number],
       "Trainer address not found"
     );
 
