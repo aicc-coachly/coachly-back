@@ -4,6 +4,7 @@ const database = require("../database/database");
 
 let io; // io 객체를 저장할 변수
 
+const chatCache = {}; // room_id별 메시지를 저장하는 캐시 객체
 
 // io 객체 초기화 함수
 exports.initializeIo = (socketIo) => {
@@ -37,6 +38,7 @@ exports.AiChatRequest = (data) => {
     });
   });
 };
+
 
 
 // 채팅방 생성
@@ -162,3 +164,47 @@ exports.getMessages = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+// 메시지 전송
+exports.sendMessage = (req, res) => {
+  const { room_id } = req.params;
+  const { sender_name, content } = req.body;
+
+  // room_id에 대한 캐시가 없다면 생성
+  if (!chatCache[room_id]) {
+    chatCache[room_id] = [];
+  }
+
+  // 메시지를 캐시에 저장
+  const message = {
+    sender_name,
+    content,
+    timestamp: new Date()
+  };
+  chatCache[room_id].push(message);
+
+  res.status(201).json({ message: "Message stored in memory" });
+};
+
+// 사용자가 채팅방을 나갈 때 대화 내용을 저장
+exports.leaveChatRoom = async (req, res) => {
+  const { room_id } = req.params;
+
+  if (!chatCache[room_id] || chatCache[room_id].length === 0) {
+    return res.status(200).json({ message: "No messages to save" });
+  }
+
+  try {
+    // 캐시에 있는 메시지를 데이터베이스에 저장
+    const messages = chatCache[room_id];
+    for (let message of messages) {
+      await database.saveMessage(room_id, message.sender_name, message.content);
+    }
+
+    // 메시지 저장 후 캐시에서 제거
+    delete chatCache[room_id];
+
+    res.status(200).json({ message: "Messages saved to database and removed from memory" });
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }}

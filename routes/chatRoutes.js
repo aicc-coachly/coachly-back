@@ -10,6 +10,7 @@ const {
   getMessages,
   getChatRooms,
   getChatRoom,
+  leaveChatRoom,
 } = require("../controller/chatController");
 
 // AI 채팅 요청 (비동기 처리)
@@ -116,6 +117,16 @@ router.get("/chat-room/:room_id/messages", async (req, res) => {
   try {
     const response = await getMessages(req, res); // 비동기 함수 호출
     res.status(200).json(response); // 응답 반환
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 사용자가 채팅방을 나갈 때 메시지를 저장하는 엔드포인트
+router.post("/chat-room/:room_id/leave", async (req, res) => {
+  try {
+    const response = await leaveChatRoom(req, res);
+    res.status(200).json(response);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
