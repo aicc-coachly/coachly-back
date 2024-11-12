@@ -17,10 +17,13 @@ const getChatRoomsByUserOrTrainer = async (userNumber, trainerNumber) => {
     query = "SELECT * FROM chat_room WHERE user_number = $1 AND status = true"; // status가 true인 경우만 조회
     values = [userNumber];
   } else if (trainerNumber) {
-    query = "SELECT * FROM chat_room WHERE trainer_number = $1 AND status = true"; // status가 true인 경우만 조회
+    query =
+      "SELECT * FROM chat_room WHERE trainer_number = $1 AND status = true"; // status가 true인 경우만 조회
     values = [trainerNumber];
   } else {
-    throw new Error("user_number 또는 trainer_number 중 하나는 제공되어야 합니다.");
+    throw new Error(
+      "user_number 또는 trainer_number 중 하나는 제공되어야 합니다."
+    );
   }
   const result = await pool.query(query, values);
   return result.rows;
@@ -46,14 +49,17 @@ module.exports = {
     const query = trainer_number
       ? "INSERT INTO chat_room (user_number, trainer_number, type) VALUES ($1, $2, $3) RETURNING *"
       : "INSERT INTO chat_room (user_number, type) VALUES ($1, $2) RETURNING *";
-    const values = trainer_number ? [user_number, trainer_number, type] : [user_number, type];
+    const values = trainer_number
+      ? [user_number, trainer_number, type]
+      : [user_number, type];
     const result = await pool.query(query, values);
     return result.rows[0];
   },
 
   // 메시지 저장
   saveMessage: async (room_id, sender_name, content) => {
-    const query = "INSERT INTO chat_message (room_id, sender_name, content) VALUES ($1, $2, $3) RETURNING *";
+    const query =
+      "INSERT INTO chat_message (room_id, sender_name, content) VALUES ($1, $2, $3) RETURNING *";
     const values = [room_id, sender_name, content];
     const result = await pool.query(query, values);
     return result.rows[0];
@@ -61,7 +67,8 @@ module.exports = {
 
   // 메시지 목록 조회
   getMessages: async (room_id) => {
-    const query = "SELECT * FROM chat_message WHERE room_id = $1 ORDER BY timestamp ASC";
+    const query =
+      "SELECT * FROM chat_message WHERE room_id = $1 ORDER BY timestamp ASC";
     const result = await pool.query(query, [room_id]);
     return result.rows;
   },
@@ -92,5 +99,7 @@ module.exports = {
     const query = "SELECT type FROM chat_room WHERE room_id = $1";
     const result = await pool.query(query, [room_id]);
     return result.rows[0]?.type;
-  }
+  },
 };
+
+module.exports = pool; // pool 객체를 내보내기
