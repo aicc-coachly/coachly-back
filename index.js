@@ -1,27 +1,27 @@
-const express = require("express"); // express 모듈 가져오기
-const cors = require("cors"); // cors 모듈 가져오기
+const express = require("express");
+const cors = require("cors");
 const PORT = 8000;
-const { spawn } = require("child_process");
 const path = require("path");
 const socketIo = require("socket.io");
 const bodyParser = require("body-parser");
-const schedule = require("node-schedule");
 require("dotenv").config();
 
-const app = express(); // express 모듈을 사용하기 위해 app 변수에 할당한다.
-const server = app.listen(PORT, () =>
-  console.log(`Server is running on ${PORT}`)
-);
+const app = express();
+const server = app.listen(PORT, () => console.log(`Server is running on ${PORT}`));
+
 const io = socketIo(server, {
   cors: {
-    origin: "http://localhost:3000", // 클라이언트 주소
-    methods: ["GET", "POST"], // 허용할 HTTP 메서드
-    allowedHeaders: ["my-custom-header", "Content-Type"], // 허용할 헤더
-    credentials: true, // 쿠키 사용 여부
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST"],
+    allowedHeaders: ["my-custom-header", "Content-Type"],
+    credentials: true,
   },
 });
 
-// Socket.io 이벤트 처리
+// chatController에 io 객체 전달
+const chatController = require("./controller/chatController");
+chatController.initializeIo(io);
+
 io.on("connection", (socket) => {
   console.log("A user connected:", socket.id);
 
@@ -31,10 +31,12 @@ io.on("connection", (socket) => {
   });
 
   socket.on("sendMessage", (message) => {
-    io.to(message.roomId).emit("messageReceived", message); // 특정 방으로 메시지 전송
+    io.to(message.roomId).emit("messageReceived", message);
   });
 
+
   socket.on("leaveRoom", (roomId) => {
+
     socket.leave(roomId);
     console.log(`User left room: ${roomId}`);
   });
@@ -48,8 +50,8 @@ app.get("/", (req, res) => {
   res.send("server");
 });
 
-app.use(cors()); //htpp, https 프로토콜을 사용하는 서버 간의 통신을 허용한다.
-app.use(express.json()); // express 모듈의 json() 메소드를 사용한다.
+app.use(cors());
+app.use(express.json());
 app.use(bodyParser.json());
 
 app.use(express.static(path.join(__dirname, "public")));
@@ -62,11 +64,4 @@ app.use(require("./routes/userRoutes"));
 app.use(require("./routes/authTokenRoutes"));
 app.use(require("./routes/refundRoutes"));
 app.use(require("./routes/scheduleRoutes"));
-app.use(require("./routes//paymentsRoutes"));
-
-// const job = schedule.scheduleJob('15 12 * * *', () => {
-//   console.log('점심 먹을 시간이야 !');
-// });
-
-// app.listen(PORT, () => console.log(`Server is running on ${PORT}`));
-//  asdads
+app.use(require("./routes/paymentsRoutes"));
