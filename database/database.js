@@ -94,3 +94,5 @@ module.exports = {
     return result.rows[0]?.type;
   }
 };
+
+module.exports =pool
