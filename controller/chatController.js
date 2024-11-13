@@ -138,7 +138,12 @@ exports.getMessages = async (req, res) => {
   const roomId = req.params.room_id;
   const client = await pool.connect();
   try {
-    const query = "SELECT * FROM chat_message WHERE room_id = $1 ORDER BY timestamp ASC";
+    const query = `
+      SELECT content, sender_name, timestamp 
+      FROM chat_message 
+      WHERE room_id = $1 
+      ORDER BY timestamp ASC
+    `;
     const result = await client.query(query, [roomId]);
     console.log("Query result:", result.rows); // 로깅하여 확인
     res.status(200).json(result.rows);
