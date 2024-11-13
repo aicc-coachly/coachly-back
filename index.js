@@ -45,7 +45,13 @@ io.on("connection", (socket) => {
   });
 
   socket.on("sendMessage", (message) => {
-    io.to(message.roomId).emit("messageReceived", message);
+    // 메시지 수신 로그 추가
+    console.log("Received message:", message);
+
+    // 중복 전송 방지
+    if (message && message.roomId) {
+      io.to(message.roomId).emit("messageReceived", message);
+    }
   });
 
   socket.on("leaveRoom", (roomId) => {
@@ -58,6 +64,3 @@ io.on("connection", (socket) => {
   });
 });
 
-app.get("/", (req, res) => {
-  res.send("server");
-});
