@@ -50,7 +50,6 @@ exports.getTrainer = async (req, res) => {
         )) AS pt_cost_options, 
         g.trainer_address, 
         g.trainer_detail_address, 
-        g.trainer_zipcode, 
         ti.resume AS resume,
         ti.image AS image,  
         ARRAY_AGG(DISTINCT s.service_name) AS service_options,
@@ -76,7 +75,7 @@ exports.getTrainer = async (req, res) => {
       WHERE 
         t.trainer_number = $1
       GROUP BY 
-        t.trainer_number, g.trainer_address, g.trainer_detail_address, g.trainer_zipcode, ti.resume, ti.image, ba.bank_name, ba.account, ba.account_name`,
+        t.trainer_number, g.trainer_address, g.trainer_detail_address, ti.resume, ti.image, ba.bank_name, ba.account, ba.account_name`,
       [trainer_number]
     );
 

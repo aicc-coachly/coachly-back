@@ -34,7 +34,7 @@ exports.updateUserInfo = async (req, res) => {
 // 사용자 주소 정보 업데이트
 exports.updateUserAddress = async (req, res) => {
   const { user_number } = req.params;
-  const { user_zipcode, user_address, user_detail_address } = req.body;
+  const { user_address, user_detail_address } = req.body;
 
   try {
     // 유효한 user_number인지 확인
@@ -48,8 +48,8 @@ exports.updateUserAddress = async (req, res) => {
     }
 
     const result = await database.query(
-      "UPDATE user_address SET user_zipcode = COALESCE($1, user_zipcode), user_address = COALESCE($2, user_address), user_detail_address = COALESCE($3, user_detail_address), updated_at = CURRENT_TIMESTAMP WHERE user_number = $4 RETURNING *",
-      [user_zipcode, user_address, user_detail_address, user_number]
+      "UPDATE user_address SET user_address = COALESCE($1, user_address), user_detail_address = COALESCE($2, user_detail_address), updated_at = CURRENT_TIMESTAMP WHERE user_number = $3 RETURNING *",
+      [user_address, user_detail_address, user_number]
     );
 
     return res.status(200).json({

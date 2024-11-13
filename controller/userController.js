@@ -74,7 +74,6 @@ exports.getUserPage = async (req, res) => {
         u.birth,
         u.phone,
         u.gender,
-        a.user_zipcode,
         a.user_address,
         a.user_detail_address
       FROM users u
