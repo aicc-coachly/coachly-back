@@ -174,23 +174,37 @@ exports.sendMessage = (req, res) => {
 exports.leaveChatRoom = async (req, res) => {
   const { room_id } = req.params;
 
+  // 캐시에 메시지가 있는지 확인
   if (!chatCache[room_id] || chatCache[room_id].length === 0) {
     return res.status(200).json({ message: "No messages to save" });
   }
 
   const client = await pool.connect();
   try {
+    // 캐시에서 메시지 가져오기
     const messages = chatCache[room_id];
+
+    // 여러 메시지를 한 번에 저장하는 트랜잭션
+    await client.query("BEGIN");
+    const query = "INSERT INTO chat_message (room_id, sender_name, content) VALUES ($1, $2, $3)";
+
     for (let message of messages) {
-      const query = "INSERT INTO chat_message (room_id, sender_name, content) VALUES ($1, $2, $3)";
       await client.query(query, [room_id, message.sender_name, message.content]);
     }
 
+    // 트랜잭션 커밋
+    await client.query("COMMIT");
+
+    // 메시지를 저장 후 캐시에서 삭제
     delete chatCache[room_id];
     res.status(200).json({ message: "Messages saved to database and removed from memory" });
   } catch (error) {
+    // 오류 발생 시 트랜잭션 롤백
+    await client.query("ROLLBACK");
+    console.error("Error saving messages:", error);
     res.status(500).json({ error: error.message });
   } finally {
     client.release();
   }
 };
+
