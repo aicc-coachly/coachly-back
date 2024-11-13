@@ -36,7 +36,7 @@ exports.getChatRooms = async (req, res) => {
       values = [userNumber];
     } else {
       query = `
-        SELECT cr.room_id, cr.user_number, cr.trainer_number, cr.status, u.user_name AS other_party_name
+        SELECT cr.room_id, cr.user_number, cr.trainer_number, cr.status, u.name AS other_party_name
         FROM chat_room cr
         LEFT JOIN users u ON cr.user_number = u.user_number
         WHERE cr.trainer_number = $1 AND cr.status = true
