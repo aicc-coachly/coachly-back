@@ -60,7 +60,7 @@ exports.getChatRoom = async (roomId, userNumber = null, trainerNumber = null) =>
   try {
     let query, values;
 
-    if (userNumber) {
+    if (userNumber !== null) {
       // 유저가 채팅방에 있는 경우, 트레이너의 이름을 가져옴
       query = `
         SELECT cr.room_id, cr.user_number, cr.trainer_number, cr.status, t.name AS other_party_name
@@ -69,7 +69,7 @@ exports.getChatRoom = async (roomId, userNumber = null, trainerNumber = null) =>
         WHERE cr.room_id = $1 AND cr.user_number = $2 AND cr.status = true
       `;
       values = [roomId, userNumber];
-    } else if (trainerNumber) {
+    } else if (trainerNumber !== null) {
       // 트레이너가 채팅방에 있는 경우, 유저의 이름을 가져옴
       query = `
         SELECT cr.room_id, cr.user_number, cr.trainer_number, cr.status, u.name AS other_party_name
@@ -86,7 +86,7 @@ exports.getChatRoom = async (roomId, userNumber = null, trainerNumber = null) =>
     const result = await client.query(query, values);
     console.log("Query result:", result.rows);
 
-    return result.rows[0];
+    return result.rows[0] || null; // 결과가 없으면 null 반환
   } catch (error) {
     console.error("Error fetching specific chat room:", error);
     throw new Error(error.message);
