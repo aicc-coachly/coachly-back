@@ -10,6 +10,34 @@ exports.initializeIo = (socketIo) => {
   io = socketIo;
 };
 
+// 일반 채팅방 생성
+exports.createChatRoom = async (req, res) => {
+  const { user_number, trainer_number } = req.body;
+  if (!user_number || !trainer_number) {
+    return res.status(400).json({ error: "user_number와 trainer_number가 필요합니다." });
+  }
+
+  try {
+    const query = "INSERT INTO chat_room (user_number, trainer_number) VALUES ($1, $2) RETURNING *";
+    const values = [user_number, trainer_number];
+    const result = await database.query(query, values);
+    const roomId = result.rows[0].room_id;
+
+    const systemMessage = {
+      roomId,
+      content: "트레이너와의 채팅방입니다. 질문을 해보세요!",
+      senderName: "시스템",
+      timestamp: new Date(),
+    };
+
+    io.to(roomId).emit("messageReceived", systemMessage);
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error("Error creating chat room:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 // 채팅방 리스트 조회
 exports.getChatRooms = async (req, res) => {
   const userNumber = req.query.userNumber || null;
