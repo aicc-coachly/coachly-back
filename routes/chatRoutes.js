@@ -40,16 +40,10 @@ router.get("/chat-room", async (req, res) => {
   const trainerNumber = req.query.trainerNumber || null;
 
   // 요청된 파라미터 출력
-  console.log("Received query parameters:", {
-    roomId,
-    userNumber,
-    trainerNumber,
-  });
+  console.log("Received query parameters:", { roomId, userNumber, trainerNumber });
 
   if (!roomId || (!userNumber && !trainerNumber)) {
-    return res
-      .status(400)
-      .json({ error: "roomId와 userNumber 또는 trainerNumber가 필요합니다." });
+    return res.status(400).json({ error: "roomId와 userNumber 또는 trainerNumber가 필요합니다." });
   }
 
   try {
@@ -63,6 +57,7 @@ router.get("/chat-room", async (req, res) => {
     if (!res.headersSent) res.status(500).json({ error: error.message });
   }
 });
+
 
 // ai 채팅방 생성
 // router.post("/chat-room/ai", createAIChatRoom);

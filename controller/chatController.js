@@ -1,6 +1,7 @@
 const path = require("path");
 const { spawn } = require("child_process");
 const pool = require("../database/database"); // pool만 가져오기
+const pool = require("../database/database");  // pool만 가져오기
 
 let io; // io 객체를 저장할 변수
 const chatCache = {}; // room_id별 메시지를 저장하는 캐시 객체
@@ -8,34 +9,6 @@ const chatCache = {}; // room_id별 메시지를 저장하는 캐시 객체
 // io 객체 초기화 함수
 exports.initializeIo = (socketIo) => {
   io = socketIo;
-};
-
-// 일반 채팅방 생성
-exports.createChatRoom = async (req, res) => {
-  const { user_number, trainer_number } = req.body;
-  if (!user_number || !trainer_number) {
-    return res.status(400).json({ error: "user_number와 trainer_number가 필요합니다." });
-  }
-
-  try {
-    const query = "INSERT INTO chat_room (user_number, trainer_number) VALUES ($1, $2) RETURNING *";
-    const values = [user_number, trainer_number];
-    const result = await database.query(query, values);
-    const roomId = result.rows[0].room_id;
-
-    const systemMessage = {
-      roomId,
-      content: "트레이너와의 채팅방입니다. 질문을 해보세요!",
-      senderName: "시스템",
-      timestamp: new Date(),
-    };
-
-    io.to(roomId).emit("messageReceived", systemMessage);
-    res.status(201).json(result.rows[0]);
-  } catch (error) {
-    console.error("Error creating chat room:", error);
-    res.status(500).json({ error: error.message });
-  }
 };
 
 // 채팅방 리스트 조회
@@ -47,9 +20,7 @@ exports.getChatRooms = async (req, res) => {
   console.log("trainerNumber:", trainerNumber);
 
   if (!userNumber && !trainerNumber) {
-    return res.status(400).json({
-      error: "user_number 또는 trainer_number 중 하나는 제공되어야 합니다.",
-    });
+    return res.status(400).json({ error: "user_number 또는 trainer_number 중 하나는 제공되어야 합니다." });
   }
 
   const client = await pool.connect();
@@ -65,7 +36,7 @@ exports.getChatRooms = async (req, res) => {
       values = [userNumber];
     } else {
       query = `
-        SELECT cr.room_id, cr.user_number, cr.trainer_number, cr.status, u.name AS other_party_name
+        SELECT cr.room_id, cr.user_number, cr.trainer_number, cr.status, u.user_name AS other_party_name
         FROM chat_room cr
         LEFT JOIN users u ON cr.user_number = u.user_number
         WHERE cr.trainer_number = $1 AND cr.status = true
@@ -84,11 +55,7 @@ exports.getChatRooms = async (req, res) => {
 };
 
 // 특정 채팅방 조회
-exports.getChatRoom = async (
-  roomId,
-  userNumber = null,
-  trainerNumber = null
-) => {
+exports.getChatRoom = async (roomId, userNumber = null, trainerNumber = null) => {
   const client = await pool.connect();
   try {
     let query, values;
@@ -106,15 +73,13 @@ exports.getChatRoom = async (
       // 트레이너가 채팅방에 있는 경우, 유저의 이름을 가져옴
       query = `
         SELECT cr.room_id, cr.user_number, cr.trainer_number, cr.status, u.name AS other_party_name
-        FROM cchat_room r
+        FROM chat_room cr
         LEFT JOIN users u ON cr.user_number = u.user_number
         WHERE cr.room_id = $1 AND cr.trainer_number = $2 AND cr.status = true
       `;
       values = [roomId, trainerNumber];
     } else {
-      throw new Error(
-        "userNumber 또는 trainerNumber 중 하나는 제공되어야 합니다."
-      );
+      throw new Error("userNumber 또는 trainerNumber 중 하나는 제공되어야 합니다.");
     }
 
     console.log("Executing query:", query, "with values:", values);
@@ -130,34 +95,25 @@ exports.getChatRoom = async (
   }
 };
 
+
 // 일반 채팅방 생성
 exports.createChatRoom = async (req, res) => {
   const { user_number, trainer_number } = req.body;
   if (!user_number || !trainer_number) {
-    return res
-      .status(400)
-      .json({ error: "user_number와 trainer_number가 필요합니다." });
+    return res.status(400).json({ error: "user_number와 trainer_number가 필요합니다." });
   }
 
   const client = await pool.connect();
   try {
-    const checkQuery =
-      "SELECT * FROM chat_room WHERE user_number = $1 AND trainer_number = $2";
-    const checkResult = await client.query(checkQuery, [
-      user_number,
-      trainer_number,
-    ]);
+    const checkQuery = "SELECT * FROM chat_room WHERE user_number = $1 AND trainer_number = $2";
+    const checkResult = await client.query(checkQuery, [user_number, trainer_number]);
 
     if (checkResult.rows.length > 0) {
       return res.status(200).json(checkResult.rows[0]);
     }
 
-    const insertQuery =
-      "INSERT INTO chat_room (user_number, trainer_number) VALUES ($1, $2) RETURNING *";
-    const result = await client.query(insertQuery, [
-      user_number,
-      trainer_number,
-    ]);
+    const insertQuery = "INSERT INTO chat_room (user_number, trainer_number) VALUES ($1, $2) RETURNING *";
+    const result = await client.query(insertQuery, [user_number, trainer_number]);
     const roomId = result.rows[0].room_id;
 
     const systemMessage = {
@@ -182,8 +138,7 @@ exports.getMessages = async (req, res) => {
   const roomId = req.params.room_id;
   const client = await pool.connect();
   try {
-    const query =
-      "SELECT * FROM chat_message WHERE room_id = $1 ORDER BY timestamp ASC";
+    const query = "SELECT * FROM chat_message WHERE room_id = $1 ORDER BY timestamp ASC";
     const result = await client.query(query, [roomId]);
     console.log("Query result:", result.rows); // 로깅하여 확인
     res.status(200).json(result.rows);
@@ -194,6 +149,7 @@ exports.getMessages = async (req, res) => {
     client.release();
   }
 };
+
 
 // 메시지 전송
 exports.sendMessage = (req, res) => {
@@ -226,19 +182,12 @@ exports.leaveChatRoom = async (req, res) => {
   try {
     const messages = chatCache[room_id];
     for (let message of messages) {
-      const query =
-        "INSERT INTO chat_message (room_id, sender_name, content) VALUES ($1, $2, $3)";
-      await client.query(query, [
-        room_id,
-        message.sender_name,
-        message.content,
-      ]);
+      const query = "INSERT INTO chat_message (room_id, sender_name, content) VALUES ($1, $2, $3)";
+      await client.query(query, [room_id, message.sender_name, message.content]);
     }
 
     delete chatCache[room_id];
-    res
-      .status(200)
-      .json({ message: "Messages saved to database and removed from memory" });
+    res.status(200).json({ message: "Messages saved to database and removed from memory" });
   } catch (error) {
     res.status(500).json({ error: error.message });
   } finally {
