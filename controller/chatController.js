@@ -1,7 +1,7 @@
 const path = require("path");
 const { spawn } = require("child_process");
 const pool = require("../database/database"); // pool만 가져오기
-const pool = require("../database/database");  // pool만 가져오기
+
 
 let io; // io 객체를 저장할 변수
 const chatCache = {}; // room_id별 메시지를 저장하는 캐시 객체
