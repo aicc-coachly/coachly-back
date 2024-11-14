@@ -2,10 +2,16 @@ const database = require("../database/database");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 require("dotenv").config();
+const CoolsmsMessageService = require("coolsms-node-sdk").default;
 
 async function connectDatabase() {
   return await database.connect();
 }
+
+const messageService = new CoolsmsMessageService(
+  process.env.SMS_API_KEY,
+  process.env.SMS_SECRET_KEY
+);
 
 exports.trainerSignup = async (req, res) => {
   const {
@@ -89,6 +95,15 @@ exports.trainerSignup = async (req, res) => {
     }
 
     await client.query("COMMIT");
+
+    // 트레이너에게 회원가입 성공 메시지 전송
+    await messageService
+      .sendOne({
+        to: phone,
+        from: "01094137012", // 발신자 번호 (인증된 번호로 설정)
+        text: `${name}님, 트레이너 회원가입이 완료되었습니다!`,
+      })
+      .then((res) => console.log(res));
 
     return res
       .status(200)
@@ -182,6 +197,14 @@ exports.userSignup = async (req, res) => {
     );
 
     await client.query("COMMIT");
+
+    await messageService
+      .sendOne({
+        to: phone,
+        from: "01094137012", // 발신자 번호 (인증된 번호로 설정)
+        text: `${name}님, coachly 회원가입이 완료되었습니다!`,
+      })
+      .then((res) => console.log(res));
 
     return res
       .status(200)

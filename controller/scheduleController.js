@@ -1,19 +1,39 @@
 const database = require("../database/database");
+const CoolsmsMessageService = require("coolsms-node-sdk").default; // CoolSMS 가져오기
+const messageService = new CoolsmsMessageService(
+  process.env.SMS_API_KEY,
+  process.env.SMS_SECRET_KEY
+);
 
 // PT 스케줄 등록
 exports.postPtSchedule = async (req, res) => {
   const { pt_number, class_date, class_time, address } = req.body;
-
   const client = await database.connect();
+
+  // Nodemailer 설정
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
 
   try {
     await client.query("BEGIN");
 
-    // pt_number에 연결된 트레이너와 회원 정보 조회
+    // pt_schedule 및 관련 정보 조회
     const ptScheduleResult = await client.query(
-      `SELECT pt_schedule.trainer_number, pt_schedule.user_number, pt_cost_option.frequency
+      `SELECT 
+         pt_schedule.trainer_number,
+         pt_schedule.user_number,
+         pt_cost_option.frequency,
+         users.phone AS user_phone,
+         trainers.phone AS trainer_phone
        FROM pt_schedule
        JOIN pt_cost_option ON pt_cost_option.amount_number = pt_schedule.amount_number
+       JOIN users ON users.user_number = pt_schedule.user_number
+       JOIN trainers ON trainers.trainer_number = pt_schedule.trainer_number
        WHERE pt_schedule.pt_number = $1`,
       [pt_number]
     );
@@ -22,7 +42,13 @@ exports.postPtSchedule = async (req, res) => {
       throw new Error("PT 스케줄을 찾을 수 없습니다.");
     }
 
-    const { trainer_number, user_number, frequency } = ptScheduleResult.rows[0];
+    const {
+      trainer_number,
+      user_number,
+      frequency,
+      user_phone,
+      trainer_phone,
+    } = ptScheduleResult.rows[0];
 
     // 새로운 스케줄 등록
     const result = await client.query(
@@ -34,17 +60,17 @@ exports.postPtSchedule = async (req, res) => {
 
     const scheduleNumber = result.rows[0].schedule_number;
 
-    // 현재 해당 pt_number의 등록된 수업 횟수 가져오기
+    // 등록된 수업 횟수 확인
     const scheduleCountResult = await client.query(
-      `SELECT COUNT(*) as count 
+      `SELECT COUNT(*) AS count 
        FROM schedule_records 
        WHERE pt_number = $1`,
       [pt_number]
     );
 
-    const registeredCount = parseInt(scheduleCountResult.rows[0].count, 10) + 1;
+    const registeredCount = parseInt(scheduleCountResult.rows[0].count, 10);
 
-    // 총 횟수와 등록된 횟수가 일치하면 pt_schedule 상태를 "completed"로 변경
+    // 횟수와 등록 횟수가 일치할 경우, pt_schedule 상태를 "completed"로 업데이트
     if (registeredCount === frequency) {
       await client.query(
         `UPDATE pt_schedule 
@@ -54,9 +80,60 @@ exports.postPtSchedule = async (req, res) => {
       );
     }
 
+    // (1) 유저 이메일 조회
+    const userQuery = "SELECT email FROM users WHERE user_number = $1";
+    const { rows: userRows } = await client.query(userQuery, [user_number]);
+    const userEmail = userRows[0]?.email;
+
+    if (!userEmail) {
+      throw new Error("User email not found");
+    }
+
+    // (2) 이메일 내용 설정
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: userEmail,
+      subject: "새로운 PT 수업 일정이 등록되었습니다",
+      html: `
+        <h1>PT 수업 일정이 등록되었습니다!</h1>
+        <p><strong>일정 날짜:</strong> ${class_date}</p>
+        <p><strong>일정 시간:</strong> ${class_time}</p>
+        <p><strong>장소:</strong> ${address}</p>
+        <p>더 자세한 내용은 앱에서 확인하세요.</p>
+      `,
+    };
+
+    // (3) 이메일 전송
+    await transporter.sendMail(mailOptions);
+
     await client.query("COMMIT");
+
+    // 문자 메시지 전송 (회원과 트레이너에게)
+    const messagePromises = [
+      messageService.sendOne({
+        to: user_phone, // 사용자 전화번호
+        from: "01094137012", // 발신 번호 (인증된 번호)
+        text: `회원님, ${class_date} ${class_time}에 PT 수업이 예약되었습니다.`,
+      }),
+      messageService.sendOne({
+        to: trainer_phone, // 트레이너 전화번호
+        from: "01094137012", // 발신 번호 (인증된 번호)
+        text: `트레이너님, ${class_date} ${class_time}에 PT 수업이 예약되었습니다.`,
+      }),
+    ];
+
+    // 문자 전송 결과 확인
+    await Promise.all(messagePromises)
+      .then((results) => {
+        results.forEach((res) => console.log("문자 전송 성공:", res));
+      })
+      .catch((err) => {
+        console.error("문자 전송 오류:", err);
+      });
+
+    // 성공 응답 반환
     res.status(201).json({
-      message: "PT schedule record created successfully",
+      message: "PT schedule record created successfully and messages sent",
       schedule_number: scheduleNumber,
       registeredCount,
       totalSessions: frequency,

@@ -5,13 +5,30 @@ const path = require("path");
 const socketIo = require("socket.io");
 const bodyParser = require("body-parser");
 require("dotenv").config();
+// const CoolsmsMessageService = require("coolsms-node-sdk").default;
+// const sms = process.env.SMS_API_KEY;
+// const secret = process.env.SMS_SECRET_KEY;
 
 const app = express();
-const server = app.listen(PORT, () => console.log(`Server is running on ${PORT}`));
+const server = app.listen(PORT, () =>
+  console.log(`Server is running on ${PORT}`)
+);
+// const messageService = new CoolsmsMessageService(
+//   "NCSIWEE32MFIELZS",
+//   "KW3SKQDXEVRCQRDDUHOMLYMDPOEFRBAQ"
+// );
+
+// messageService
+//   .sendOne({
+//     to: "01094137012",
+//     from: "01094137012",
+//     text: "안녕하세요",
+//   })
+//   .then((res) => console.log(res));
 
 const io = socketIo(server, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: process.env.REACT_APP_FRONT_URL || "http://localhost:3000",
     methods: ["GET", "POST"],
     allowedHeaders: ["my-custom-header", "Content-Type"],
     credentials: true,
@@ -34,9 +51,7 @@ io.on("connection", (socket) => {
     io.to(message.roomId).emit("messageReceived", message);
   });
 
-
   socket.on("leaveRoom", (roomId) => {
-
     socket.leave(roomId);
     console.log(`User left room: ${roomId}`);
   });
