@@ -1,13 +1,23 @@
-const database = require("../database/database");
+const nodemailer = require('nodemailer');
+const database = require('../database/database');
 
-// PT 스케줄 등록
+// Nodemailer 설정
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
+
+// PT 스케줄 등록 및 이메일 알림
 exports.postPtSchedule = async (req, res) => {
   const { pt_number, class_date, class_time, address } = req.body;
 
   const client = await database.connect();
 
   try {
-    await client.query("BEGIN");
+    await client.query('BEGIN');
 
     // pt_number에 연결된 트레이너와 회원 정보 조회
     const ptScheduleResult = await client.query(
@@ -19,7 +29,7 @@ exports.postPtSchedule = async (req, res) => {
     );
 
     if (ptScheduleResult.rows.length === 0) {
-      throw new Error("PT 스케줄을 찾을 수 없습니다.");
+      throw new Error('PT 스케줄을 찾을 수 없습니다.');
     }
 
     const { trainer_number, user_number, frequency } = ptScheduleResult.rows[0];
@@ -54,17 +64,45 @@ exports.postPtSchedule = async (req, res) => {
       );
     }
 
-    await client.query("COMMIT");
+    // (1) 유저 이메일 조회
+    const userQuery = 'SELECT email FROM users WHERE user_number = $1';
+    const { rows: userRows } = await client.query(userQuery, [user_number]);
+    const userEmail = userRows[0]?.email;
+
+    if (!userEmail) {
+      throw new Error('User email not found');
+    }
+
+    // (2) 이메일 내용 설정
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: userEmail,
+      subject: '새로운 PT 수업 일정이 등록되었습니다',
+      html: `
+        <h1>PT 수업 일정이 등록되었습니다!</h1>
+        <p><strong>일정 날짜:</strong> ${class_date}</p>
+        <p><strong>일정 시간:</strong> ${class_time}</p>
+        <p><strong>장소:</strong> ${address}</p>
+        <p>더 자세한 내용은 앱에서 확인하세요.</p>
+      `,
+    };
+
+    // (3) 이메일 전송
+    await transporter.sendMail(mailOptions);
+
+    await client.query('COMMIT');
     res.status(201).json({
-      message: "PT schedule record created successfully",
+      message: 'PT schedule record created successfully and email sent',
       schedule_number: scheduleNumber,
       registeredCount,
       totalSessions: frequency,
     });
   } catch (error) {
-    await client.query("ROLLBACK");
-    console.error("Error creating PT schedule record:", error);
-    res.status(500).json({ error: "Failed to create PT schedule record" });
+    await client.query('ROLLBACK');
+    console.error('Error creating PT schedule record or sending email:', error);
+    res
+      .status(500)
+      .json({ error: 'Failed to create PT schedule record or send email' });
   } finally {
     client.release();
   }
@@ -82,14 +120,14 @@ exports.completePtSchedule = async (req, res) => {
 
     // 2. PT 스케줄 테이블에서 관련 PT 번호 가져오기
     const ptNumberResult = await database.query(
-      "SELECT pt_number FROM schedule_records WHERE schedule_number = $1",
+      'SELECT pt_number FROM schedule_records WHERE schedule_number = $1',
       [schedule_number]
     );
 
     if (ptNumberResult.rows.length === 0) {
       return res
         .status(404)
-        .json({ error: "PT 스케줄 정보를 찾을 수 없습니다." });
+        .json({ error: 'PT 스케줄 정보를 찾을 수 없습니다.' });
     }
 
     const { pt_number } = ptNumberResult.rows[0];
@@ -102,28 +140,28 @@ exports.completePtSchedule = async (req, res) => {
 
     // 4. 트레이너의 계좌 정보를 조회
     const trainerInfoResult = await database.query(
-      "SELECT p.trainer_number, b.trainer_account_number FROM pt_schedule p JOIN trainer_bank_account b ON p.trainer_number = b.trainer_number WHERE p.pt_number = $1",
+      'SELECT p.trainer_number, b.trainer_account_number FROM pt_schedule p JOIN trainer_bank_account b ON p.trainer_number = b.trainer_number WHERE p.pt_number = $1',
       [pt_number]
     );
 
     if (trainerInfoResult.rows.length === 0) {
       return res
         .status(404)
-        .json({ error: "트레이너 정보를 찾을 수 없습니다." });
+        .json({ error: '트레이너 정보를 찾을 수 없습니다.' });
     }
 
     const { trainer_account_number } = trainerInfoResult.rows[0];
 
     // 5. 페이 체크 테이블에 기록 추가
     await database.query(
-      "INSERT INTO paycheck (schedule_number, trainer_account_number) VALUES ($1, $2)",
+      'INSERT INTO paycheck (schedule_number, trainer_account_number) VALUES ($1, $2)',
       [schedule_number, trainer_account_number]
     );
 
-    return res.status(200).json({ message: "PT Schedule marked as completed" });
+    return res.status(200).json({ message: 'PT Schedule marked as completed' });
   } catch (error) {
-    console.error("Error completing PT schedule:", error);
-    return res.status(500).json({ error: "Failed to complete PT schedule" });
+    console.error('Error completing PT schedule:', error);
+    return res.status(500).json({ error: 'Failed to complete PT schedule' });
   }
 };
 
@@ -133,14 +171,14 @@ exports.completePaycheck = async (req, res) => {
   try {
     // 페이 체크 상태를 'completed'로 변경
     await database.query(
-      "UPDATE paycheck SET status = TRUE WHERE paycheck_number = $1",
+      'UPDATE paycheck SET status = TRUE WHERE paycheck_number = $1',
       [paycheck_number]
     );
 
-    return res.status(200).json({ message: "Paycheck marked as completed" });
+    return res.status(200).json({ message: 'Paycheck marked as completed' });
   } catch (error) {
-    console.error("Error completing paycheck:", error);
-    return res.status(500).json({ error: "Failed to complete paycheck" });
+    console.error('Error completing paycheck:', error);
+    return res.status(500).json({ error: 'Failed to complete paycheck' });
   }
 };
 
@@ -151,20 +189,20 @@ exports.updatePtSchedule = async (req, res) => {
   try {
     // PT 스케줄 업데이트
     const result = await database.query(
-      "UPDATE schedule_records SET class_date = $1, class_time = $2, address = $3, updated_at = NOW() WHERE schedule_number = $4",
+      'UPDATE schedule_records SET class_date = $1, class_time = $2, address = $3, updated_at = NOW() WHERE schedule_number = $4',
       [class_date, class_time, address, schedule_number]
     );
 
     if (result.rowCount === 0) {
-      return res.status(404).json({ message: "Schedule not found" });
+      return res.status(404).json({ message: 'Schedule not found' });
     }
 
     return res
       .status(200)
-      .json({ message: "PT Schedule updated successfully" });
+      .json({ message: 'PT Schedule updated successfully' });
   } catch (error) {
-    console.error("Error updating PT schedule:", error);
-    return res.status(500).json({ error: "Failed to update PT schedule" });
+    console.error('Error updating PT schedule:', error);
+    return res.status(500).json({ error: 'Failed to update PT schedule' });
   }
 };
 
@@ -172,32 +210,32 @@ exports.deletePtSchedule = async (req, res) => {
   const { schedule_number } = req.params;
   const { status } = req.body;
 
-  console.log("Updating schedule with status:", status);
+  console.log('Updating schedule with status:', status);
 
   // 상태가 'deleted'일 경우 delete_at을 현재 시간으로 업데이트
   const updateValues = [status];
-  let query = "UPDATE schedule_records SET status = $1";
+  let query = 'UPDATE schedule_records SET status = $1';
 
-  if (status === "deleted") {
-    query += ", delete_at = CURRENT_TIMESTAMP"; // delete_at을 현재 시간으로 설정
+  if (status === 'deleted') {
+    query += ', delete_at = CURRENT_TIMESTAMP'; // delete_at을 현재 시간으로 설정
   }
 
-  query += " WHERE schedule_number = $2";
+  query += ' WHERE schedule_number = $2';
   updateValues.push(schedule_number);
 
   try {
     const result = await database.query(query, updateValues);
 
     if (result.rowCount === 0) {
-      return res.status(404).json({ message: "Schedule not found" });
+      return res.status(404).json({ message: 'Schedule not found' });
     }
 
     return res
       .status(200)
-      .json({ message: "PT Schedule status updated successfully" });
+      .json({ message: 'PT Schedule status updated successfully' });
   } catch (error) {
-    console.error("Error updating PT schedule:", error);
-    return res.status(500).json({ error: "Failed to update PT schedule" });
+    console.error('Error updating PT schedule:', error);
+    return res.status(500).json({ error: 'Failed to update PT schedule' });
   }
 };
 
@@ -231,7 +269,7 @@ exports.getScheduleRecords = async (req, res) => {
     );
 
     if (ptScheduleResult.rows.length === 0) {
-      return res.status(404).json({ message: "PT 스케줄을 찾을 수 없습니다." });
+      return res.status(404).json({ message: 'PT 스케줄을 찾을 수 없습니다.' });
     }
 
     const ptScheduleData = ptScheduleResult.rows[0];
@@ -271,7 +309,7 @@ exports.getScheduleRecords = async (req, res) => {
       schedule_records: scheduleRecords,
     });
   } catch (error) {
-    console.error("Database query error:", error);
-    res.status(500).json({ error: "Failed to fetch schedule records" });
+    console.error('Database query error:', error);
+    res.status(500).json({ error: 'Failed to fetch schedule records' });
   }
 };
