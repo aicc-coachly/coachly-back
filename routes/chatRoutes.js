@@ -34,22 +34,15 @@ router.get("/chat-rooms", async (req, res) => {
 });
 
 // 특정 채팅방 조회
-router.get("/chat-room", async (req, res) => {
-  const roomId = req.query.roomId;
-  const userNumber = req.query.userNumber || null;
-  const trainerNumber = req.query.trainerNumber || null;
+router.get("/chat-room/:roomId", async (req, res) => {
+  const roomId = req.params.roomId;
+  const userNumber = req.query.userNumber !== "null" ? req.query.userNumber : null;
+  const trainerNumber = req.query.trainerNumber !== "null" ? req.query.trainerNumber : null;
 
-  // 요청된 파라미터 출력
-  console.log("Received query parameters:", {
-    roomId,
-    userNumber,
-    trainerNumber,
-  });
+  console.log("Received parameters:", { roomId, userNumber, trainerNumber });
 
-  if (!roomId || (!userNumber && !trainerNumber)) {
-    return res
-      .status(400)
-      .json({ error: "roomId와 userNumber 또는 trainerNumber가 필요합니다." });
+  if (!roomId || (userNumber === null && trainerNumber === null)) {
+    return res.status(400).json({ error: "roomId와 userNumber 또는 trainerNumber가 필요합니다." });
   }
 
   try {
@@ -63,6 +56,9 @@ router.get("/chat-room", async (req, res) => {
     if (!res.headersSent) res.status(500).json({ error: error.message });
   }
 });
+
+
+
 
 // ai 채팅방 생성
 // router.post("/chat-room/ai", createAIChatRoom);
