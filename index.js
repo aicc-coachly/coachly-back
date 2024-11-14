@@ -45,7 +45,8 @@ async function saveMessagesToDatabase(roomId) {
     await client.query("BEGIN");
     const query = "INSERT INTO chat_message (room_id, sender_name, content) VALUES ($1, $2, $3)";
     for (const message of messages) {
-      await client.query(query, [roomId, message.senderName, message.content]);
+      console.log(`Saving message - Room ID: ${roomId}, Sender Name: ${message.sender_name}, Content: ${message.content}`);
+      await client.query(query, [roomId, message.sender_name, message.content]);
     }
     await client.query("COMMIT");
     cache[roomId] = []; // 캐시 초기화
@@ -69,6 +70,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("sendMessage", (message) => {
+    console.log("Received message:", message); // 메시지 로깅 추가
     const { roomId, senderName, content, timestamp } = message;
 
     if (!cache[roomId]) cache[roomId] = [];
