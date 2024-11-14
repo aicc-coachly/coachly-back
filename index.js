@@ -16,7 +16,7 @@ const cache = {};
 
 const io = socketIo(server, {
   cors: {
-    origin: process.env.REACT_APP_BACKEND_URL || 'http://localhost:3000',
+    origin: process.env.REACT_APP_FRONT_URL || 'http://localhost:3000',
     methods: ['GET', 'POST'],
     allowedHeaders: ['my-custom-header', 'Content-Type'],
     credentials: true,
