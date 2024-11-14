@@ -12,10 +12,10 @@ RUN npm install
 COPY . .
 
 # 환경 변수로 포트 설정 (기본값 8080)
-ENV PORT=8080
+ENV PORT=8000
 
 # 포트 노출
-EXPOSE 8080
+EXPOSE 8000
 
 # 애플리케이션 실행
 CMD ["npm", "start"]
