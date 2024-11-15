@@ -5,6 +5,7 @@ const messageService = new CoolsmsMessageService(
   process.env.SMS_API_KEY,
   process.env.SMS_SECRET_KEY
 );
+const nodemailer = require("nodemailer");
 
 // PT 스케줄 등록
 
@@ -289,12 +290,92 @@ exports.deletePtSchedule = async (req, res) => {
       return res.status(404).json({ message: 'Schedule not found' });
     }
 
-    return res
-      .status(200)
-      .json({ message: 'PT Schedule status updated successfully' });
+    // schedule_number로 pt_number 조회
+    const ptQuery = `
+      SELECT pt_number 
+      FROM schedule_records 
+      WHERE schedule_number = $1
+    `;
+    const ptResult = await database.query(ptQuery, [schedule_number]);
+    if (ptResult.rows.length === 0) {
+      return res.status(404).json({ message: "PT number not found" });
+    }
+    const pt_number = ptResult.rows[0].pt_number;
+
+    // pt_number로 pt_schedule 테이블에서 user_number와 trainer_number 조회
+    const ptScheduleQuery = `
+      SELECT user_number, trainer_number 
+      FROM pt_schedule 
+      WHERE pt_number = $1
+    `;
+    const ptScheduleResult = await database.query(ptScheduleQuery, [pt_number]);
+    if (ptScheduleResult.rows.length === 0) {
+      return res.status(404).json({ message: "User and trainer not found" });
+    }
+    const { user_number, trainer_number } = ptScheduleResult.rows[0];
+
+    // user_number와 trainer_number로 phone 컬럼 조회
+    const userPhoneQuery = `
+      SELECT phone, name
+      FROM users 
+      WHERE user_number = $1
+    `;
+    const trainerPhoneQuery = `
+      SELECT phone, name
+      FROM trainers 
+      WHERE trainer_number = $1
+    `;
+    const userPhoneResult = await database.query(userPhoneQuery, [user_number]);
+    const trainerPhoneResult = await database.query(trainerPhoneQuery, [
+      trainer_number,
+    ]);
+
+    if (
+      userPhoneResult.rows.length === 0 ||
+      trainerPhoneResult.rows.length === 0
+    ) {
+      return res.status(404).json({ message: "Phone numbers not found" });
+    }
+    const userPhone = userPhoneResult.rows[0].phone;
+    const trainerPhone = trainerPhoneResult.rows[0].phone;
+    const userName = userPhoneResult.rows[0].name;
+    const trainerName = trainerPhoneResult.rows[0].name;
+
+    // 일정 취소 메시지 생성
+    // const messageContent = `안녕하세요, 일정이 취소되었습니다. 자세한 내용은 담당자에게 문의하세요.`;
+
+    // 메시지 전송
+    const messagePromises = [
+      messageService.sendOne({
+        to: userPhone, // 사용자 전화번호
+        from: "01094137012", // 발신 번호 (인증된 번호)
+        text: `${userName}님, PT 수업이 취소되었습니다.`,
+      }),
+      messageService.sendOne({
+        to: trainerPhone, // 트레이너 전화번호
+        from: "01094137012", // 발신 번호 (인증된 번호)
+        text: `${trainerName}님, PT 수업이 취소되었습니다.`,
+      }),
+    ];
+
+    // 문자 전송 결과 확인
+    await Promise.all(messagePromises)
+      .then((results) => {
+        results.forEach((res) => console.log("문자 전송 성공:", res));
+      })
+      .catch((err) => {
+        console.error("문자 전송 오류:", err);
+      });
+
+    return res.status(200).json({
+      message: "PT Schedule status updated and notification sent successfully",
+    });
   } catch (error) {
-    console.error('Error updating PT schedule:', error);
-    return res.status(500).json({ error: 'Failed to update PT schedule' });
+    console.error("Error updating PT schedule or sending SMS:", error);
+    return res
+      .status(500)
+      .json({ error: "Failed to update PT schedule or send notification" });
+
   }
 };
 
