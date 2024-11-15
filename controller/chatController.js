@@ -31,7 +31,7 @@ exports.getChatRooms = async (req, res) => {
         SELECT cr.room_id, cr.user_number, cr.trainer_number, cr.status, t.name AS other_party_name
         FROM chat_room cr
         LEFT JOIN trainers t ON cr.trainer_number = t.trainer_number
-        WHERE cr.user_number = $1 AND cr.status = true
+        WHERE cr.user_number = $1 AND cr.status = 'active'
       `;
       values = [userNumber];
     } else {
@@ -39,7 +39,7 @@ exports.getChatRooms = async (req, res) => {
         SELECT cr.room_id, cr.user_number, cr.trainer_number, cr.status, u.name AS other_party_name
         FROM chat_room cr
         LEFT JOIN users u ON cr.user_number = u.user_number
-        WHERE cr.trainer_number = $1 AND cr.status = true
+        WHERE cr.trainer_number = $1 AND cr.status = 'active'
       `;
       values = [trainerNumber];
     }
@@ -66,7 +66,7 @@ exports.getChatRoom = async (roomId, userNumber = null, trainerNumber = null) =>
         SELECT cr.room_id, cr.user_number, cr.trainer_number, cr.status, t.name AS other_party_name
         FROM chat_room cr
         LEFT JOIN trainers t ON cr.trainer_number = t.trainer_number
-        WHERE cr.room_id = $1 AND cr.user_number = $2 AND cr.status = true
+        WHERE cr.room_id = $1 AND cr.user_number = $2 AND cr.status = 'active'
       `;
       values = [roomId, userNumber];
     } else if (trainerNumber !== null) {
@@ -75,7 +75,7 @@ exports.getChatRoom = async (roomId, userNumber = null, trainerNumber = null) =>
         SELECT cr.room_id, cr.user_number, cr.trainer_number, cr.status, u.name AS other_party_name
         FROM chat_room cr
         LEFT JOIN users u ON cr.user_number = u.user_number
-        WHERE cr.room_id = $1 AND cr.trainer_number = $2 AND cr.status = true
+        WHERE cr.room_id = $1 AND cr.trainer_number = $2 AND cr.status = 'active'
       `;
       values = [roomId, trainerNumber];
     } else {
@@ -99,26 +99,44 @@ exports.getChatRoom = async (roomId, userNumber = null, trainerNumber = null) =>
 // 일반 채팅방 생성
 exports.createChatRoom = async (req, res) => {
   const { user_number, trainer_number } = req.body;
-  if (!user_number || !trainer_number) {
-    return res.status(400).json({ error: "user_number와 trainer_number가 필요합니다." });
+  if (!user_number) {
+    return res.status(400).json({ error: "user_number는 필수입니다." });
   }
 
   const client = await pool.connect();
   try {
+    // 트레이너 여부 확인
+    let type = "AI"; // 기본값: AI
+    if (trainer_number) {
+      const trainerCheckQuery = "SELECT * FROM trainers WHERE trainer_number = $1";
+      const trainerCheckResult = await client.query(trainerCheckQuery, [trainer_number]);
+      if (trainerCheckResult.rows.length > 0) {
+        type = "trainer"; // 트레이너가 존재하면 타입을 트레이너로 설정
+      }
+    }
+
+    // 기존 채팅방 여부 확인
     const checkQuery = "SELECT * FROM chat_room WHERE user_number = $1 AND trainer_number = $2";
-    const checkResult = await client.query(checkQuery, [user_number, trainer_number]);
+    const checkResult = await client.query(checkQuery, [user_number, trainer_number || null]);
 
     if (checkResult.rows.length > 0) {
       return res.status(200).json(checkResult.rows[0]);
     }
 
-    const insertQuery = "INSERT INTO chat_room (user_number, trainer_number) VALUES ($1, $2) RETURNING *";
-    const result = await client.query(insertQuery, [user_number, trainer_number]);
+    // 새로운 채팅방 생성
+    const insertQuery = `
+      INSERT INTO chat_room (user_number, trainer_number, type) 
+      VALUES ($1, $2, $3) 
+      RETURNING *`;
+    const result = await client.query(insertQuery, [user_number, trainer_number || null, type]);
     const roomId = result.rows[0].room_id;
 
+    // 시스템 메시지 생성
     const systemMessage = {
       roomId,
-      content: "트레이너와의 채팅방입니다. 질문을 해보세요!",
+      content: type === "trainer" 
+        ? "트레이너와의 채팅방입니다. 질문을 해보세요!" 
+        : "AI와의 채팅방입니다. 무엇이든 물어보세요!",
       senderName: "시스템",
       timestamp: new Date(),
     };
@@ -132,6 +150,7 @@ exports.createChatRoom = async (req, res) => {
     client.release();
   }
 };
+
 
 // 메시지 목록 조회
 exports.getMessages = async (req, res) => {

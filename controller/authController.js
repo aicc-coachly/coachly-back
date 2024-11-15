@@ -10,7 +10,8 @@ async function connectDatabase() {
 
 const messageService = new CoolsmsMessageService(
   process.env.SMS_API_KEY,
-  process.env.SMS_SECRET_KEY
+  process.env.SMS_SECRET_KEY,
+  { mode: 'test' }
 );
 
 exports.trainerSignup = async (req, res) => {

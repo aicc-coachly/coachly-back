@@ -1,30 +1,45 @@
 const express = require("express");
 const cors = require("cors");
-const PORT = 8000;
+const bodyParser = require("body-parser");
 const path = require("path");
 const socketIo = require("socket.io");
-const bodyParser = require("body-parser");
-require("dotenv").config();
 const pool = require('./database/database'); // PostgreSQL 연결 풀 가져오기
 
-const app = express();
-const server = app.listen(PORT, () =>
-  console.log(`Server is running on ${PORT}`)
-);
+require("dotenv").config();
 
-// 전역 캐시 객체 정의
-const cache = {};
+const app = express();
+const PORT = 8000;
+
+const allowedOrigins = [process.env.REACT_APP_FRONT_URL , 'http://localhost:3000'];
+
+app.use(cors());
+
+app.options("*", cors()); // OPTIONS 요청 허용
+
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+// 명시적 CORS 헤더 추가
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", process.env.REACT_APP_FRONT_URL , "http://localhost:3000");
+  res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, PATCH, DELETE");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  next();
+});
+
+const server = app.listen(PORT, () =>
+  console.log(`Server is running on port ${PORT}`)
+);
 
 const io = socketIo(server, {
   cors: {
-    origin: process.env.REACT_APP_FRONT_URL || 'http://localhost:3000',
-    methods: ['GET', 'POST'],
-    allowedHeaders: ['my-custom-header', 'Content-Type'],
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
     credentials: true,
   },
 });
 
-app.use(cors());
+
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -37,6 +52,8 @@ app.use(require('./routes/authTokenRoutes'));
 app.use(require('./routes/refundRoutes'));
 app.use(require('./routes/scheduleRoutes'));
 app.use(require('./routes/paymentsRoutes'));
+
+const cache = {};
 
 // 메시지 저장을 위한 함수 (데이터베이스에 연결)
 async function saveMessagesToDatabase(roomId) {

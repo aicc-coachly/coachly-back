@@ -2,7 +2,8 @@ const database = require("../database/database");
 const CoolsmsMessageService = require("coolsms-node-sdk").default; // CoolSMS 가져오기
 const messageService = new CoolsmsMessageService(
   process.env.SMS_API_KEY,
-  process.env.SMS_SECRET_KEY
+  process.env.SMS_SECRET_KEY,
+  { mode: 'test' }
 );
 const nodemailer = require("nodemailer");
 
