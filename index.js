@@ -1,4 +1,3 @@
-
 const express = require("express");
 const cors = require("cors");
 const PORT = 8000;
@@ -6,7 +5,6 @@ const path = require("path");
 const socketIo = require("socket.io");
 const bodyParser = require("body-parser");
 require("dotenv").config();
-const path = require('path');
 const pool = require('./database/database'); // PostgreSQL 연결 풀 가져오기
 
 const app = express();
