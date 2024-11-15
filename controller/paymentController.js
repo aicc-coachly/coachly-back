@@ -172,6 +172,7 @@ exports.getPtSchedule = async (req, res) => {
         u.name AS user_name,
         u.user_number,
         t.name AS trainer_name,
+        t.trainer_number AS  trainer_number,
         p.amount AS amount,
         p.frequency AS frequency
       FROM 
