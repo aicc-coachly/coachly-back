@@ -1,4 +1,3 @@
-
 const database = require("../database/database");
 const CoolsmsMessageService = require("coolsms-node-sdk").default; // CoolSMS 가져오기
 const messageService = new CoolsmsMessageService(
@@ -7,9 +6,6 @@ const messageService = new CoolsmsMessageService(
 );
 const nodemailer = require("nodemailer");
 
-// PT 스케줄 등록
-
-const nodemailer = require('nodemailer');
 
 // Nodemailer 설정
 const transporter = nodemailer.createTransport({
